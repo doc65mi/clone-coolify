@@ -1,0 +1,10 @@
+.git
+.env
+.venv
+data
+ssh
+__pycache__
+.pytest_cache
+files MD/struttura.md
+files MD/todolist.md
+files MD/INSTALLAZIONE.md

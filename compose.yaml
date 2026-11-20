@@ -1,0 +1,20 @@
+services:
+  clone-coolify:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${CLONE_PORT:-8787}:8787"
+    environment:
+      CLONE_ADMIN_PASSWORD: ${CLONE_ADMIN_PASSWORD:?Run python tools/setup.py first}
+      CLONE_MASTER_KEY: ${CLONE_MASTER_KEY:?Run python tools/setup.py first}
+    volumes:
+      - clone-data:/data
+      - ./ssh:/ssh:ro
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 60s
+volumes:
+  clone-data:
