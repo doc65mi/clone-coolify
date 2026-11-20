@@ -29,6 +29,23 @@ def fingerprint(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
 
 
+def configuration_fingerprint(value):
+    """Ignore observation timestamps, including nested server heartbeat timestamps.
+
+    Keep every other field, including credentials, image, source and network identity.
+    These timestamps change when Coolify polls a resource without editing its config.
+    """
+    volatile = {'updated_at', 'sentinel_updated_at', 'last_online', 'last_online_at',
+                'last_restart_at', 'last_health_check_at'}
+    def stable(item):
+        if isinstance(item, dict):
+            return {key: stable(val) for key, val in item.items() if key not in volatile}
+        if isinstance(item, list):
+            return [stable(val) for val in item]
+        return item
+    return fingerprint(stable(value))
+
+
 def container_matches(container, uid):
     name = container.get("Name", "").lstrip("/")
     labels = container.get("Config", {}).get("Labels") or {}
@@ -273,7 +290,7 @@ def build_plan(source, target, source_probe, target_probe, configs, source_api, 
         warnings.append("Saranno copiate e fermate solo le risorse selezionate. Le altre restano invariate: sospendere eventuali loro scritture verso i database selezionati.")
     if preserve_domains:
         warnings.append("I domini originali saranno registrati sulla destinazione; DNS invariato.")
-    return {"id": uuid.uuid4().hex, "created": time.time(), "version": "0.5.1", "selected_uuids": sorted(selected),
+    return {"id": uuid.uuid4().hex, "created": time.time(), "version": "0.6.0", "selected_uuids": sorted(selected),
             "source_version": source["version"], "target_version": target["version"],
             "source_machine": source_probe["machine_id"], "target_machine": target_probe["machine_id"],
             "source_server": src_server["uuid"], "target_server": dst_server["uuid"],

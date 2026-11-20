@@ -171,8 +171,8 @@ def read_config(session=Depends(authorize)):
 
 
 @app.get("/api/setup")
-def read_setup(session=Depends(authorize)):
-    return setup_status(store.get("connections"), ssh_dir, VERSION)
+def read_setup(language: str = 'it', session=Depends(authorize)):
+    return setup_status(store.get("connections"), ssh_dir, VERSION, language)
 
 
 @app.post("/api/config")

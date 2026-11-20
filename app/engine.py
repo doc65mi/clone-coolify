@@ -6,7 +6,7 @@ from pathlib import Path
 
 from . import backup
 from .coolify import CloneError, Coolify, resource_id, volume_name
-from .planner import APP_FIELDS, DB_COMMON, DB_FIELDS, assert_empty, container_matches, fingerprint
+from .planner import APP_FIELDS, DB_COMMON, DB_FIELDS, assert_empty, container_matches, fingerprint, configuration_fingerprint
 from .ssh import SSH
 from .git_source import application_payload, github_snapshot, import_github
 
@@ -140,13 +140,13 @@ def run_clone(store, configs, plan, job_id, ssh_dir, master_key):
             raise CloneError("Inventario cambiato dopo il piano")
         for row in plan["resources"]:
             current_detail = source.call("GET", f"{row['group']}/{row['uuid']}")
-            if fingerprint(current_detail) != fingerprint(row["detail"]):
+            if configuration_fingerprint(current_detail) != configuration_fingerprint(row["detail"]):
                 raise CloneError("Configurazione sorgente cambiata dopo il piano")
             if row["group"] == "applications":
                 if row.get('git_source') and fingerprint(github_snapshot(source, current_detail)) != fingerprint(row['git_source']):
                     raise CloneError('Credenziali GitHub cambiate dopo il piano')
                 current_env = source.listing(f"applications/{row['uuid']}/envs")
-                if fingerprint(current_env) != fingerprint(row["env"]):
+                if configuration_fingerprint(current_env) != configuration_fingerprint(row["env"]):
                     raise CloneError("Variabili sorgente cambiate dopo il piano")
             else:
                 check_database(src_ssh, row)

@@ -3,7 +3,7 @@ Clone Coolify
 
 **Select your applications. Copy their configuration and data. Stay in control.**
 
-Italiano e English · Version 0.5.1 · Experimental / Sperimentale
+Italiano e English · Version 0.6.0 · Experimental / Sperimentale
 
 Italiano
 --------
@@ -36,6 +36,14 @@ Come funziona
 I nuovi identificativi possono essere diversi da quelli della sorgente:
 il programma aggiorna i riferimenti UUID nelle variabili copiate.
 Non ci sono clonazioni automatiche o pianificate.
+
+Lingua dell’interfaccia
+~~~~~~~~~~~~~~~~~~~~~~
+
+Scegli Italiano o English nel login o nella barra superiore. La preferenza
+resta salvata nel browser e il cambio lingua conserva moduli e selezioni.
+Interfaccia, guida, avvisi e registro eventi sono disponibili in entrambe
+le lingue; nomi e dati delle risorse restano invariati.
 
 Funzionalità disponibili
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -111,6 +119,14 @@ Destination identifiers may differ from the original ones: the application
 updates UUID references in copied environment variables.
 There are no automatic or scheduled clones.
 
+Interface language
+~~~~~~~~~~~~~~~~~~
+
+Choose Italiano or English on the sign-in screen or in the top bar.
+The browser remembers your preference, and switching language preserves
+forms and selections. The interface, guide, warnings and event logs are
+available in both languages; resource names and data remain unchanged.
+
 Available features
 ~~~~~~~~~~~~~~~~~~
 
@@ -156,12 +172,12 @@ must remain local.
 Validation / Verifiche
 ---------------------
 
-61 Python tests and 8 JavaScript tests passed for the application code;
+64 Python tests and 13 JavaScript tests passed for the application code;
 read-only API/SSH analysis was checked on Coolify 4.7.6. A full production
 migration has not been run to validate this release. Test a complete clone
 on disposable instances before operational use.
 
-61 test Python e 8 JavaScript superati per il codice applicativo;
+64 test Python e 13 JavaScript superati per il codice applicativo;
 analisi API/SSH in sola lettura verificata su Coolify 4.7.6.
 La release non è stata collaudata con una migrazione completa in produzione:
 provare prima una clonazione su istanze usa-e-getta.

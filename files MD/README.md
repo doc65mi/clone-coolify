@@ -1,6 +1,10 @@
 # Clone Coolify
 
-Applicazione self-hosted per analizzare e copiare applicazioni e database tra due installazioni Coolify indipendenti. Backend Python/FastAPI, interfaccia web in italiano e backup cifrati. Versione **0.5.1**, sperimentale.
+Applicazione self-hosted per analizzare e copiare applicazioni e database tra due installazioni Coolify indipendenti. Backend Python/FastAPI, interfaccia web in italiano e inglese e backup cifrati. Versione **0.6.0**, sperimentale.
+
+## Lingua dell’app
+
+Scegli Italiano o English nel login o nella barra superiore. La preferenza viene conservata nel browser; il cambio lingua mantiene moduli e selezioni. Sono tradotti interfaccia, guida, piano, avvisi e registro eventi. Nomi, valori di configurazione e frase di conferma restano invariati.
 
 ## Funzionamento
 
@@ -42,7 +46,7 @@ Configura chiavi dedicate in `ssh/` e registra in `ssh/known_hosts` le host key 
 
 Services/Compose, altri provider/build pack Git, bind/file mount, database multipli o con ruoli aggiuntivi, variabili condivise/bloccate e altre configurazioni non supportate bloccano il piano. Utenti e impostazioni globali Coolify, cron, registry, DNS e servizi esterni non sono copiati. Non è un clone universale e non effettua una sincronizzazione continua.
 
-Verifica della release: 61 test Python e 8 JavaScript superati; analisi API/SSH in sola lettura su Coolify 4.7.6. I test automatici verificano logica, sicurezza e percorsi simulati. Una clonazione completa va prima provata su istanze usa-e-getta: non è stata avviata alcuna migrazione di produzione per collaudare questa release.
+Verifica della release: 64 test Python e 13 JavaScript superati; analisi API/SSH in sola lettura su Coolify 4.7.6. I test automatici verificano logica, sicurezza e percorsi simulati. Una clonazione completa va prima provata su istanze usa-e-getta: non è stata avviata alcuna migrazione di produzione per collaudare questa release.
 
 ## Sicurezza dei dati
 
@@ -54,6 +58,6 @@ Questo repository contiene solo codice, test e documentazione generica. `.env`, 
 
 ```sh
 python -m pytest -q
-node --test tests/selection-model.test.cjs
+node --test tests/selection-model.test.cjs tests/i18n.test.cjs
 node --check app/static/app.js
 ```

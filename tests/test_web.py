@@ -51,7 +51,19 @@ def test_index_and_security_headers(client):
     assert response.status_code == 200
     assert 'lang="it"' in response.text
     assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
-    assert client.get("/health").json()["version"] == "0.5.1"
+    assert client.get("/health").json()["version"] == "0.6.0"
+
+
+def test_english_guide_is_authenticated_and_does_not_change_connections(client):
+    assert client.get('/api/setup?language=en').status_code == 401
+    client.post('/api/login', json={'password': PASSWORD})
+    english = client.get('/api/setup?language=en').json()
+    italian = client.get('/api/setup?language=it').json()
+    assert english['sections'][0]['title'] == 'Choose where to run the app'
+    assert italian['sections'][0]['title'] == "Scegli dove eseguire l'app"
+    assert english['connections'] == italian['connections']
+    assert english['sections'][2]['commands'] == italian['sections'][2]['commands']
+    assert client.get('/api/setup?language=unknown').json()['sections'] == italian['sections']
 
 
 def test_plan_requires_explicit_selection_before_any_server_connection(client):

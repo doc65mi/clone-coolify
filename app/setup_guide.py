@@ -1,5 +1,6 @@
 """Read-only onboarding content and local prerequisites. Never reads SSH key contents."""
 from pathlib import Path
+from .guide_en import SECTIONS as EN_SECTIONS, LIMITS as EN_LIMITS
 
 SECTIONS = [
     {"title": "Scegli dove eseguire l'app", "text":
@@ -46,14 +47,14 @@ SECTIONS = [
 ]
 
 LIMITS = [
-    "Disponibili: applicazioni Docker Image, variabili leggibili, volumi nominati con nome API uguale a quello effettivo e database PostgreSQL/MySQL/MariaDB con un database applicativo e utenti standard.",
-    "Bloccati: Git/Dockerfile, stack Services/Compose, bind/file mount, variabili condivise o bloccate, configurazioni avanzate, database pubblici o con più database/ruoli e altri motori.",
-    "Non copiati: utenti e impostazioni globali Coolify, cron, integrazioni Git/registry, backup pianificati e servizi esterni. Nessuna modifica automatica ai DNS.",
+    "Disponibili: applicazioni Docker Image compatibili, GitHub App con build Dockerfile, variabili leggibili, volumi nominati verificabili e database PostgreSQL/MySQL/MariaDB con un database applicativo e utenti supportati.",
+    "Bloccati: altre sorgenti Git/build pack, stack Services/Compose, bind/file mount, variabili condivise o bloccate, configurazioni avanzate non supportate, database pubblici o con più database/ruoli e altri motori.",
+    "Non copiati: utenti e impostazioni globali Coolify, cron, registry, backup pianificati e servizi esterni. Nessuna modifica automatica ai DNS. Le credenziali GitHub necessarie vengono importate per le app supportate; auto deploy e anteprime disattivati sulla copia.",
     "Nessuna clonazione è stata ancora collaudata su istanze reali: esegui prima una prova su due istanze di test.",
 ]
 
 
-def setup_status(configs, directory, version):
+def setup_status(configs, directory, version, language='it'):
     root = Path(directory)
     checks = []
     for role in ("source", "target"):
@@ -64,4 +65,5 @@ def setup_status(configs, directory, version):
         checks.append({"role": role, "configured": bool(config), "key_name": filename if safe else "Nome non valido",
                        "key_present": bool(safe and (root / filename).is_file())})
     return {"version": version, "ssh_directory": str(root), "known_hosts_present": (root / "known_hosts").is_file(),
-            "connections": checks, "sections": SECTIONS, "limits": LIMITS}
+            "connections": checks, "sections": EN_SECTIONS if language == 'en' else SECTIONS,
+            "limits": EN_LIMITS if language == 'en' else LIMITS}

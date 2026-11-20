@@ -121,6 +121,20 @@ def test_changed_configuration_prevents_every_remote_write(setup_worker):
     assert not any(method in {"POST","PATCH","DELETE"} for _,method,_,_ in FakeAPI.calls)
 
 
+def test_coolify_polling_timestamps_do_not_block_clone(setup_worker):
+    row = setup_worker[2]['resources'][0]
+    row['detail'].update(updated_at='old', destination={'server': {'uuid': 'server', 'updated_at': 'old', 'sentinel_updated_at': 'old'}})
+    FakeAPI.detail.update(updated_at='new', destination={'server': {'uuid': 'server', 'updated_at': 'new', 'sentinel_updated_at': 'new'}})
+    assert run(setup_worker)['status'] == 'copied'
+
+
+def test_nested_server_identity_change_still_blocks_every_write(setup_worker):
+    setup_worker[2]['resources'][0]['detail']['destination'] = {'server': {'uuid': 'original'}}
+    FakeAPI.detail['destination'] = {'server': {'uuid': 'different'}}
+    assert run(setup_worker)['status'] == 'failed'
+    assert not any(method in {'POST', 'PATCH', 'DELETE'} for _, method, _, _ in FakeAPI.calls)
+
+
 def test_creation_failure_never_stops_source(setup_worker):
     FakeAPI.fail=True
     job=run(setup_worker)
