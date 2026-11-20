@@ -51,7 +51,7 @@ def test_index_and_security_headers(client):
     assert response.status_code == 200
     assert 'lang="it"' in response.text
     assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
-    assert client.get("/health").json()["version"] == "0.5.0"
+    assert client.get("/health").json()["version"] == "0.5.1"
 
 
 def test_plan_requires_explicit_selection_before_any_server_connection(client):

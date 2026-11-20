@@ -1,6 +1,6 @@
 # Clone Coolify
 
-Applicazione self-hosted per analizzare e copiare applicazioni e database tra due installazioni Coolify indipendenti. Backend Python/FastAPI, interfaccia web in italiano e backup cifrati. Versione **0.5.0**, sperimentale.
+Applicazione self-hosted per analizzare e copiare applicazioni e database tra due installazioni Coolify indipendenti. Backend Python/FastAPI, interfaccia web in italiano e backup cifrati. Versione **0.5.1**, sperimentale.
 
 ## Funzionamento
 
