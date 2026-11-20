@@ -37,6 +37,32 @@ PG_DUMP = 'exec pg_dump -U "$POSTGRES_USER" -d "${POSTGRES_DB:-$POSTGRES_USER}" 
 PG_RESTORE = 'exec pg_restore --clean --if-exists --exit-on-error --no-owner -U "$POSTGRES_USER" -d "${POSTGRES_DB:-$POSTGRES_USER}"'
 PG_CHECK = '''psql -X -A -t -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "${POSTGRES_DB:-$POSTGRES_USER}" -c "SELECT json_build_object('databases',(SELECT json_agg(datname) FROM pg_database WHERE NOT datistemplate AND datname <> 'postgres'),'roles',(SELECT json_agg(rolname) FROM pg_roles WHERE rolname NOT LIKE 'pg_%'))"'''
 PG_DEFAULT_CHECK = '''psql -X -A -t -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname NOT LIKE 'pg_toast%') + (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname NOT IN ('pg_catalog','information_schema')) + (SELECT count(*) FROM pg_extension WHERE extname <> 'plpgsql')"'''
+PG_VERSION = '''psql -X -A -t -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "${POSTGRES_DB:-$POSTGRES_USER}" -c "SHOW server_version_num"'''
+PG_EMPTY = PG_DEFAULT_CHECK.replace('-d postgres ', '-d "${POSTGRES_DB:-$POSTGRES_USER}" ')
+IMAGE_MISMATCH = "L'immagine database è cambiata (tag mobile): fissare la stessa immagine prima della copia"
+
+
+def postgres_version(ssh, container):
+    raw = ssh.run(exec_container(container['Id'], PG_VERSION)).decode().strip()
+    if not re.fullmatch(r'\d{5,6}', raw):
+        raise CloneError('Versione PostgreSQL non verificabile')
+    version = int(raw)
+    return version
+
+
+def check_database_image(row, container, target_ssh):
+    if row['kind'] != 'postgresql':
+        if container['Image'] != row['container']['Image']:
+            raise CloneError(IMAGE_MISMATCH)
+        return
+    source_version = row.get('postgres_version')
+    if not source_version:
+        raise CloneError('Versione PostgreSQL sorgente non registrata: ripetere l’analisi')
+    target_version = postgres_version(target_ssh, container)
+    # PostgreSQL 10+: major is first component; older versions use major.minor.
+    series = lambda value: value // (10000 if value >= 100000 else 100)
+    if series(source_version) != series(target_version):
+        raise CloneError('Versioni principali PostgreSQL diverse: ripristino bloccato')
 MYSQL_DUMP = '''export MYSQL_PWD="${MYSQL_ROOT_PASSWORD:-$MARIADB_ROOT_PASSWORD}"; tool=$(command -v mariadb-dump || command -v mysqldump); exec "$tool" -uroot --single-transaction --routines --triggers --events --hex-blob --databases "${MYSQL_DATABASE:-$MARIADB_DATABASE}"'''
 MYSQL_RESTORE = '''export MYSQL_PWD="${MYSQL_ROOT_PASSWORD:-$MARIADB_ROOT_PASSWORD}"; tool=$(command -v mariadb || command -v mysql); exec "$tool" -uroot'''
 MYSQL_CHECK = '''export MYSQL_PWD="${MYSQL_ROOT_PASSWORD:-$MARIADB_ROOT_PASSWORD}"; tool=$(command -v mariadb || command -v mysql); "$tool" -uroot -N -B -e "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME NOT IN ('information_schema','performance_schema','mysql','sys'); SELECT CONCAT('USER:',User) FROM mysql.user WHERE User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema','mariadb.sys'); SELECT CONCAT('ENGINE:',ENGINE) FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('information_schema','performance_schema','mysql','sys') AND TABLE_TYPE='BASE TABLE' AND ENGINE <> 'InnoDB';"'''
@@ -150,6 +176,8 @@ def run_clone(store, configs, plan, job_id, ssh_dir, master_key):
                     raise CloneError("Variabili sorgente cambiate dopo il piano")
             else:
                 check_database(src_ssh, row)
+                if row['kind'] == 'postgresql':
+                    row['postgres_version'] = postgres_version(src_ssh, row['container'])
             container = next((c for c in source_probe["containers"] if c["Id"] == row["container"]["Id"]), None)
             if not container or not container.get("State", {}).get("Running"):
                 raise CloneError("Container sorgente cambiato o fermo dopo il piano")
@@ -264,9 +292,7 @@ def run_clone(store, configs, plan, job_id, ssh_dir, master_key):
                 container = wait_container(dst_ssh, new_uid)
                 data["target_containers"].append(container["Id"])
                 save()
-                source_image = row["container"]["Image"]
-                if container["Image"] != source_image:
-                    raise CloneError("L'immagine database è cambiata (tag mobile): fissare la stessa immagine prima della copia")
+                check_database_image(row, container, dst_ssh)
                 artifact = next(a for a in data["backups"] if a["resource"] == row["uuid"] and a["kind"] == "database")
                 command = PG_RESTORE if row["kind"] == "postgresql" else MYSQL_RESTORE
                 backup.restore(dst_ssh, exec_container(container["Id"], command, stdin=True),

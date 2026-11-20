@@ -51,7 +51,7 @@ def test_index_and_security_headers(client):
     assert response.status_code == 200
     assert 'lang="it"' in response.text
     assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
-    assert client.get("/health").json()["version"] == "0.6.1"
+    assert client.get("/health").json()["version"] == "0.7.0"
 
 
 def test_english_guide_is_authenticated_and_does_not_change_connections(client):
@@ -64,6 +64,16 @@ def test_english_guide_is_authenticated_and_does_not_change_connections(client):
     assert english['connections'] == italian['connections']
     assert english['sections'][2]['commands'] == italian['sections'][2]['commands']
     assert client.get('/api/setup?language=unknown').json()['sections'] == italian['sections']
+
+
+def test_resume_restore_requires_login_csrf_and_exact_confirmation(client):
+    url = '/api/jobs/unknown/resume-restore'
+    assert client.post(url, json={'confirmation':'RIPRENDI RIPRISTINO'}).status_code == 401
+    csrf = client.post('/api/login', json={'password':PASSWORD}).json()['csrf']
+    assert client.post(url, json={'confirmation':'RIPRENDI RIPRISTINO'}).status_code == 403
+    response = client.post(url, headers={'x-csrf-token':csrf}, json={'confirmation':'RIPRENDI RIPRISTINO', 'snapshot_accepted':False})
+    assert response.status_code == 400
+    assert not client.get('/api/jobs').json()['busy']
 
 
 def test_plan_requires_explicit_selection_before_any_server_connection(client):

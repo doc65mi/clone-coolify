@@ -70,6 +70,11 @@ class Execute(BaseModel):
     external_writers_stopped: bool = False
 
 
+class ResumeRestore(BaseModel):
+    confirmation: str = Field(max_length=80)
+    snapshot_accepted: bool = False
+
+
 class PlanOptions(BaseModel):
     # Destination applications remain stopped until explicitly activated.
     preserve_domains: bool = False

@@ -17,7 +17,8 @@ from fastapi.staticfiles import StaticFiles
 from .coolify import CloneError, Coolify
 from .catalog import expand_database_selection, linked_source_catalog
 from .engine import check_database, recover_source, run_clone
-from .models import Connections, Execute, Login, PlanOptions
+from .models import Connections, Execute, Login, PlanOptions, ResumeRestore
+from .resume import eligible as resume_eligible, resume_restore
 from .planner import build_plan, fingerprint, public_plan
 from .ssh import SSH
 from .setup_guide import setup_status
@@ -282,7 +283,36 @@ def execute(body: Execute, session=Depends(authorize)):
 
 @app.get("/api/jobs")
 def jobs(session=Depends(authorize)):
-    return {"busy": store.lock.locked(), "jobs": store.jobs()}
+    rows = store.jobs()
+    for job in rows:
+        job['can_resume_restore'] = resume_eligible(job, store.get(f"job-plan:{job['id']}"))
+    return {"busy": store.lock.locked(), "jobs": rows}
+
+
+@app.post('/api/jobs/{job_id}/resume-restore', status_code=202)
+def resume_job(job_id: str, body: ResumeRestore, session=Depends(authorize)):
+    if not store.lock.acquire(blocking=False):
+        raise HTTPException(409, "Un'operazione è già in corso")
+    launched = False
+    try:
+        if body.confirmation != 'RIPRENDI RIPRISTINO' or not body.snapshot_accepted:
+            raise CloneError('Confermare il ripristino dal backup originale')
+        job = next((j for j in store.jobs() if j['id'] == job_id), None)
+        plan = store.get(f'job-plan:{job_id}') if job else None
+        if not job or not resume_eligible(job, plan):
+            raise CloneError('Job non idoneo al recupero automatico')
+        configs = store.get(f'job-config:{job_id}')
+        if not configs or fingerprint(configs) != fingerprint(store.get('connections')):
+            raise CloneError('Connessioni modificate: recupero bloccato')
+        store.job(job_id, 'queued', {**job['data'], 'resume_pending': True})
+        thread = threading.Thread(target=resume_restore,
+            args=(store, job, configs, plan, ssh_dir, master_key), daemon=True, name='restore-worker')
+        thread.start()
+        launched = True
+        return {'job_id': job_id}
+    finally:
+        if not launched:
+            store.lock.release()
 
 
 @app.get("/api/jobs/{job_id}/events")

@@ -27,7 +27,7 @@
         <button data-tab="guide" class="nav-item"><span>☷</span> Guida e istruzioni</button>
         <button data-tab="history" class="nav-item"><span>◷</span> Operazioni <span id="job-count" class="badge">0</span></button>
       </nav>
-      <div class="sidebar-bottom"><span class="pill">SELF-HOSTED</span><p>Copia i tuoi progetti.<br>Mantieni il controllo.</p><small id="version">v0.6.1</small><button id="logout" class="text-button">Esci dal workspace</button></div>
+      <div class="sidebar-bottom"><span class="pill">SELF-HOSTED</span><p>Copia i tuoi progetti.<br>Mantieni il controllo.</p><small id="version">v0.7.0</small><button id="logout" class="text-button">Esci dal workspace</button></div>
     </aside>
     <div class="main-shell">
       <header><div><span class="muted">Workspace</span><span class="breadcrumb">/</span><span id="page-label">Panoramica</span></div><div class="header-right"><label class="language-control"><span>Lingua</span><select class="language-select" aria-label="Lingua"><option value="it">Italiano</option><option value="en">English</option></select></label><span class="lock-icon">▣</span> Sessione privata <span class="avatar">AD</span></div></header>
@@ -36,7 +36,7 @@
         <div id="setup-prompt" class="info-box" hidden><strong>Puoi collegare i server quando vuoi.</strong><p>Le istruzioni per URL, token API e chiavi SSH sono già disponibili nel backend.</p><button type="button" class="secondary" data-open-guide>Apri la guida alla configurazione</button></div>
         <section id="overview" class="tab-panel">
           <div class="page-heading"><div><p class="eyebrow">SERVER MIGRATION</p><h1>Porta tutto al prossimo server.</h1><p class="muted">Collega, verifica e prepara il clone. Un passaggio alla volta, con ogni operazione tracciata.</p></div><button id="open-connections" class="secondary">Configura connessioni</button></div>
-          <div class="release-note"><span class="pill orange">RELEASE 0.6</span><span>PostgreSQL e GitHub/Dockerfile supportati nelle configurazioni compatibili. Analizza sempre la selezione prima della copia.</span></div>
+          <div class="release-note"><span class="pill orange">RELEASE 0.7</span><span>PostgreSQL e GitHub/Dockerfile supportati nelle configurazioni compatibili. Analizza sempre la selezione prima della copia.</span></div>
           <div class="server-flow">
             <article class="server-card"><div class="card-top"><span class="server-glyph">▤</span><span class="pill">SORGENTE</span></div><h2>Da dove partiamo</h2><p id="source-summary-url" class="server-url">Istanza non collegata</p><div class="server-footer"><span id="source-state">In attesa di configurazione</span><small>API + SSH</small></div></article>
             <div class="flow-link" aria-hidden="true"><span>⇢</span><small>COPIA</small></div>
@@ -83,5 +83,6 @@
     </div>
   </div>
   <dialog id="execute-dialog"><form id="execute-form"><p class="eyebrow">AVVIO DELLA COPIA</p><h2>Conferma il piano verificato.</h2><p>Le applicazioni sorgente saranno fermate per acquisire il backup, poi riavviate. Il risultato sulla destinazione resterà fermo.</p><label class="check"><input id="accept-downtime" type="checkbox" required><span>Accetto il fermo temporaneo delle applicazioni sorgente.</span></label><label class="check"><input id="accept-writers" type="checkbox" required><span>Ho sospeso client esterni, cron e altre scritture ai database durante il backup.</span></label><label>Scrivi CLONA DESTINAZIONE VUOTA<input id="confirmation" autocomplete="off" required></label><p class="muted">Le operazioni fallite non vengono ritentate o cancellate automaticamente. I backup vengono conservati.</p><div class="dialog-actions"><button id="cancel-execute" type="button" class="secondary">Annulla</button><button type="submit" class="primary">Avvia clonazione</button></div></form></dialog>
+  <dialog id="resume-dialog"><form id="resume-form"><h2>Riprendi ripristino</h2><p>Verrà usato il backup originale. La sorgente rimane in esecuzione. Il recupero verifica le risorse create dal job e si ferma se il database destinazione contiene dati.</p><label class="check"><input id="accept-snapshot" type="checkbox" required><span>Accetto che le scritture successive al backup non siano incluse nella copia.</span></label><label>Scrivi RIPRENDI RIPRISTINO<input id="resume-confirmation" autocomplete="off" required></label><p id="resume-error" class="error" role="alert"></p><div class="dialog-actions"><button id="cancel-resume" type="button" class="secondary">Annulla</button><button type="submit" class="primary">Riprendi ripristino</button></div></form></dialog>
 </body>
 </html>
