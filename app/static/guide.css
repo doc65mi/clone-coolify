@@ -37,6 +37,7 @@
 .guide-command pre{font: .8125rem/1.6 Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 12px;color:#f6c7a9;user-select:all}
 .guide-command .secondary{padding:6px 12px;font-size:.75rem}
 .guide-limits{border-color:#4c352a}
+#analysis-notice{margin:0 22px 18px;overflow-wrap:anywhere}
 .language-control{display:inline-flex;align-items:center;gap:8px;margin:0;font-size:.75rem;white-space:nowrap}
 .language-select{background:#151b24;color:#e6ecf5;border:1px solid #475466;border-radius:6px;padding:7px 9px;font:inherit;cursor:pointer}
 .language-select:focus-visible{outline:2px solid var(--orange);outline-offset:3px}

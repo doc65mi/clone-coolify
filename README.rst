@@ -3,7 +3,7 @@ Clone Coolify
 
 **Select your applications. Copy their configuration and data. Stay in control.**
 
-Italiano e English · Version 0.6.0 · Experimental / Sperimentale
+Italiano e English · Version 0.6.1 · Experimental / Sperimentale
 
 Italiano
 --------

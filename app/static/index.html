@@ -27,7 +27,7 @@
         <button data-tab="guide" class="nav-item"><span>☷</span> Guida e istruzioni</button>
         <button data-tab="history" class="nav-item"><span>◷</span> Operazioni <span id="job-count" class="badge">0</span></button>
       </nav>
-      <div class="sidebar-bottom"><span class="pill">SELF-HOSTED</span><p>Copia i tuoi progetti.<br>Mantieni il controllo.</p><small id="version">v0.6.0</small><button id="logout" class="text-button">Esci dal workspace</button></div>
+      <div class="sidebar-bottom"><span class="pill">SELF-HOSTED</span><p>Copia i tuoi progetti.<br>Mantieni il controllo.</p><small id="version">v0.6.1</small><button id="logout" class="text-button">Esci dal workspace</button></div>
     </aside>
     <div class="main-shell">
       <header><div><span class="muted">Workspace</span><span class="breadcrumb">/</span><span id="page-label">Panoramica</span></div><div class="header-right"><label class="language-control"><span>Lingua</span><select class="language-select" aria-label="Lingua"><option value="it">Italiano</option><option value="en">English</option></select></label><span class="lock-icon">▣</span> Sessione privata <span class="avatar">AD</span></div></header>
@@ -52,6 +52,7 @@
           </article>
           <div class="plan-layout">
             <article class="panel inventory"><div class="panel-heading"><div><h2>Piano di clonazione</h2><p class="muted">L'analisi controlla le risorse selezionate senza modificarle.</p></div><button id="analyze" class="primary" disabled>Analizza selezione</button></div>
+              <div id="analysis-notice" class="notice" role="status" aria-live="polite" hidden></div>
               <label class="check compact"><input id="preserve-domains" type="checkbox"><span>Mantieni i domini originali nelle configurazioni (DNS invariati)</span></label>
               <div id="empty-plan" class="empty"><div class="empty-icon">▦</div><h3>Prima conosciamo i tuoi server.</h3><p>Configura le connessioni e avvia l'analisi.<br>Qui vedrai le risorse e gli eventuali ostacoli.</p></div>
               <div id="plan-content" hidden><div class="table-scroll"><table><thead><tr><th>Risorsa</th><th>Tipo</th><th>Dati</th><th>Esito</th></tr></thead><tbody id="resource-rows"></tbody></table></div><div id="plan-blocks"></div><p id="plan-expiry" class="muted"></p></div>
