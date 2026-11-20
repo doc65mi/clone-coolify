@@ -290,7 +290,7 @@ def build_plan(source, target, source_probe, target_probe, configs, source_api, 
         warnings.append("Saranno copiate e fermate solo le risorse selezionate. Le altre restano invariate: sospendere eventuali loro scritture verso i database selezionati.")
     if preserve_domains:
         warnings.append("I domini originali saranno registrati sulla destinazione; DNS invariato.")
-    return {"id": uuid.uuid4().hex, "created": time.time(), "version": "0.7.0", "selected_uuids": sorted(selected),
+    return {"id": uuid.uuid4().hex, "created": time.time(), "version": "0.7.1", "selected_uuids": sorted(selected),
             "source_version": source["version"], "target_version": target["version"],
             "source_machine": source_probe["machine_id"], "target_machine": target_probe["machine_id"],
             "source_server": src_server["uuid"], "target_server": dst_server["uuid"],

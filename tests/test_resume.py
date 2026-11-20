@@ -62,7 +62,7 @@ def recovery(tmp_path, monkeypatch):
         def containers(self):
             if self.role == 'source':
                 return [{'Id':'source-db', 'Image':'source-image', 'State':{'Running':True}}]
-            return [{'Id':'target-db', 'Name':'/new-db', 'Image':'new-image', 'State':{'Running':self.started}}]
+            return [{'Id':'target-db', 'Name':'/new-db', 'Image':'new-image', 'State':{'Running':self.started, 'StartedAt':'new' if self.started else 'old'}}]
         def run(self, args):
             if args[-1] == PG_VERSION: return b'180006' if self.role == 'source' else b'180007'
             if args[-1] == PG_EMPTY: return b'0' if self.empty else b'1'
@@ -131,3 +131,27 @@ def test_corrupt_backup_blocks_all_remote_writes(recovery, monkeypatch):
     monkeypatch.setattr(resume.backup, 'verify_file', invalid)
     assert run(recovery)['status'] == 'failed'
     assert recovery[4] == []
+
+
+@pytest.mark.parametrize('error', ['Container destinazione non sano', 'Timeout di avvio della risorsa destinazione'])
+def test_start_failures_are_recoverable_only_before_restore(error):
+    job, _, plan = records()
+    job['data']['error'] = error
+    assert resume.eligible(job, plan)
+    job['data']['restore_attempted'] = True
+    assert not resume.eligible(job, plan)
+
+
+def test_resume_reuses_database_already_running_after_async_start(recovery, monkeypatch):
+    ssh = recovery[5]
+    original = ssh.__init__
+    def init(self, config, directory):
+        original(self, config, directory)
+        self.started = self.role == 'target'
+    monkeypatch.setattr(ssh, '__init__', init)
+    recovery[1]['data']['error'] = 'Container destinazione non sano'
+    result = run(recovery)
+    assert result['status'] == 'copied'
+    assert ('restore',) in recovery[4]
+    assert not any(c[0] == 'POST' for c in recovery[4])
+    assert ('stop','target',['target-db']) in recovery[4]

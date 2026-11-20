@@ -1,6 +1,6 @@
 # Clone Coolify
 
-Applicazione self-hosted per analizzare e copiare applicazioni e database tra due installazioni Coolify indipendenti. Backend Python/FastAPI, interfaccia web in italiano e inglese e backup cifrati. Versione **0.7.0**, sperimentale.
+Applicazione self-hosted per analizzare e copiare applicazioni e database tra due installazioni Coolify indipendenti. Backend Python/FastAPI, interfaccia web in italiano e inglese e backup cifrati. Versione **0.7.1**, sperimentale.
 
 ## Lingua dell’app
 
@@ -46,7 +46,7 @@ Configura chiavi dedicate in `ssh/` e registra in `ssh/known_hosts` le host key 
 
 Services/Compose, altri provider/build pack Git, bind/file mount, database multipli o con ruoli aggiuntivi, variabili condivise/bloccate e altre configurazioni non supportate bloccano il piano. Utenti e impostazioni globali Coolify, cron, registry, DNS e servizi esterni non sono copiati. Non è un clone universale e non effettua una sincronizzazione continua.
 
-Verifica della release: 74 test Python e 13 JavaScript superati; analisi API/SSH in sola lettura su Coolify 4.7.6. I test automatici verificano logica, sicurezza e percorsi simulati. Una clonazione completa va prima provata su istanze usa-e-getta: non è stata avviata alcuna migrazione di produzione per collaudare questa release.
+Verifica della release: 80 test Python e 13 JavaScript superati; analisi API/SSH in sola lettura su Coolify 4.7.6. I test automatici verificano logica, sicurezza e percorsi simulati. Una clonazione completa va prima provata su istanze usa-e-getta: non è stata avviata alcuna migrazione di produzione per collaudare questa release.
 
 ## Sicurezza dei dati
 
@@ -64,4 +64,6 @@ node --check app/static/app.js
 
 ## Recupero del blocco immagine PostgreSQL
 
-Un tag mobile può scaricare aggiornamenti minori diversi sui due server senza modifiche del database. Per PostgreSQL il dump logico viene ripristinato dopo verifica della stessa versione principale. In Operazioni, **Riprendi ripristino** è disponibile solo per il precedente blocco immagine, con un PostgreSQL e applicazioni senza volumi. Riutilizza il backup originale, verifica risorse e database vuoto e non ferma la sorgente. Richiede conferma esplicita; la copia non comprende le scritture successive al backup. Altre condizioni bloccano il recupero; nessuna cancellazione automatica dei tentativi falliti.
+Un tag mobile può scaricare aggiornamenti minori diversi sui due server senza modifiche del database. Per PostgreSQL il dump logico viene ripristinato dopo verifica della stessa versione principale. In Operazioni, **Riprendi ripristino** è disponibile per i blocchi immagine, healthcheck o timeout avvenuti prima di qualsiasi ripristino, con un PostgreSQL e applicazioni senza volumi. Riutilizza il backup originale, verifica risorse e database vuoto e non ferma la sorgente. Richiede conferma esplicita; la copia non comprende le scritture successive al backup. Altre condizioni bloccano il recupero; nessuna cancellazione automatica dei tentativi falliti.
+
+Il recupero riutilizza il database del job se è già avviato e sano, senza riaccodare un avvio Coolify. Quando serve avviarlo, attende la nuova generazione del container e la stabilizzazione del controllo di salute fino al timeout; un healthcheck transitorio non interrompe subito la copia. Database popolati, app destinazione già avviate e modifiche alle configurazioni bloccano comunque il recupero.

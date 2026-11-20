@@ -10,6 +10,37 @@ from app.planner import fingerprint
 from app.store import Store
 
 
+def test_wait_container_allows_transient_unhealthy_state(monkeypatch):
+    states = iter(['unhealthy', 'starting', 'healthy'])
+    class SSH:
+        def containers(self):
+            return [{'Id':'db', 'Name':'/db', 'State':{'Running':True, 'Health':{'Status':next(states)}}}]
+    monkeypatch.setattr(engine.time, 'sleep', lambda _: None)
+    assert engine.wait_container(SSH(), 'db')['State']['Health']['Status'] == 'healthy'
+
+
+def test_wait_container_does_not_accept_old_healthy_generation(monkeypatch):
+    containers = iter([
+        {'Id':'old', 'Name':'/db', 'State':{'Running':True, 'StartedAt':'before', 'Health':{'Status':'healthy'}}},
+        {'Id':'new', 'Name':'/db', 'State':{'Running':True, 'StartedAt':'after', 'Health':{'Status':'starting'}}},
+        {'Id':'new', 'Name':'/db', 'State':{'Running':True, 'StartedAt':'after', 'Health':{'Status':'healthy'}}},
+    ])
+    class SSH:
+        def containers(self): return [next(containers)]
+    monkeypatch.setattr(engine.time, 'sleep', lambda _: None)
+    assert engine.wait_container(SSH(), 'db', previous_generation=('old','before'))['Id'] == 'new'
+
+
+def test_wait_container_still_blocks_persistent_unhealthy_state(monkeypatch):
+    clock = iter([0,1,3])
+    class SSH:
+        def containers(self): return [{'Id':'db','Name':'/db','State':{'Running':True,'Health':{'Status':'unhealthy'}}}]
+    monkeypatch.setattr(engine.time, 'monotonic', lambda: next(clock))
+    monkeypatch.setattr(engine.time, 'sleep', lambda _: None)
+    with pytest.raises(CloneError, match='non sano'):
+        engine.wait_container(SSH(), 'db', timeout=2)
+
+
 class FakeSSH:
     instances = []
     fail_dump = False

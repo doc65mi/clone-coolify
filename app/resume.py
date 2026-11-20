@@ -1,4 +1,4 @@
-"""Explicit recovery of the legacy PostgreSQL image-check failure, before any restore.
+"""Explicit recovery of PostgreSQL image/start failures, before any restore.
 
 Only a single PostgreSQL database and stateless applications are eligible.
 No generic retry, deletion, source downtime or overwriting a populated database.
@@ -9,7 +9,7 @@ from pathlib import Path
 from . import backup
 from .coolify import CloneError, Coolify, resource_id
 from .engine import (IMAGE_MISMATCH, PG_EMPTY, PG_RESTORE, check_database,
-                     check_database_image, exec_container, postgres_version, remap, wait_container)
+                     check_database_image, container_generation, exec_container, postgres_version, remap, wait_container)
 from .planner import APP_FIELDS, DB_FIELDS, container_matches, fingerprint, infrastructure, server_for
 from .git_source import GIT_FIELDS
 from .ssh import SSH
@@ -21,7 +21,8 @@ def eligible(job, plan):
     data = job['data']
     rows = plan['resources']
     databases = [r for r in rows if r['group'] == 'databases']
-    return (data.get('error') == IMAGE_MISMATCH and data.get('phase') == 'ripristino' and
+    recoverable_errors = {IMAGE_MISMATCH, 'Container destinazione non sano', 'Timeout di avvio della risorsa destinazione'}
+    return (data.get('error') in recoverable_errors and data.get('phase') == 'ripristino' and
             data.get('source_recovered') and not data.get('restore_attempted') and
             len(databases) == 1 and databases[0]['kind'] == 'postgresql' and
             all(r['group'] in ('applications', 'databases') and
@@ -32,7 +33,7 @@ def eligible(job, plan):
 
 
 def validate_target(api, ssh, plan, data):
-    """Read-only: exact resource set, stopped containers, original credentials and envs."""
+    """Read-only: exact resource set, applications never started, original credentials and envs."""
     inventory = api.inventory()
     expected = {(r['group'], data['mapping'][r['uuid']]) for r in plan['resources']}
     actual = {(g, r['uuid']) for g in ('applications', 'databases', 'services') for r in inventory[g]}
@@ -41,13 +42,15 @@ def validate_target(api, ssh, plan, data):
     if server_for({'server_uuid': plan['target_server']}, inventory)['uuid'] != plan['target_server']:
         raise CloneError('Identità destinazione cambiata: recupero bloccato')
     allowed = {uid for _, uid in expected}
+    database_uid = data['mapping'][next(r['uuid'] for r in plan['resources'] if r['group'] == 'databases')]
     allowed_environments = {env['id'] for project in inventory.get('project_details', [])
                             if project['uuid'] in data.get('created_projects', [])
                             for env in project.get('environments', [])}
     for container in ssh.containers():
         if infrastructure(container):
             continue
-        if not any(container_matches(container, uid) for uid in allowed) or container.get('State', {}).get('Running'):
+        if (not any(container_matches(container, uid) for uid in allowed) or
+                (container.get('State', {}).get('Running') and not container_matches(container, database_uid))):
             raise CloneError('La destinazione deve contenere solo le copie ferme di questo job')
     for row in plan['resources']:
         uid = resource_id(data['mapping'][row['uuid']])
@@ -108,12 +111,21 @@ def resume_restore(store, job, configs, plan, ssh_dir, master_key):
         api = Coolify(configs['target'])
         validate_target(api, target_ssh, plan, data)
         uid = resource_id(data['mapping'][row['uuid']])
-        # Journal intent before start; failures always stop this job's database.
+        # A previous asynchronous start may have completed after a failed poll.
+        # Reuse a running healthy database; do not enqueue another restart.
+        existing = [c for c in target_ssh.containers() if container_matches(c, uid)]
+        if len(existing) > 1:
+            raise CloneError('Richiesto esattamente un container esistente per risorsa')
+        current = existing[0] if existing else None
         started = True
         data.update(phase='ripristino', progress=70)
         save()
-        api.call('POST', f'databases/{uid}/start')
-        container = wait_container(target_ssh, uid)
+        if current and current.get('State', {}).get('Running'):
+            container = wait_container(target_ssh, uid)
+        else:
+            previous = container_generation(current) if current else None
+            api.call('POST', f'databases/{uid}/start')
+            container = wait_container(target_ssh, uid, previous_generation=previous)
         check_database_image(row, container, target_ssh)
         check_database(target_ssh, {**row, 'container': container})
         if int(target_ssh.run(exec_container(container['Id'], PG_EMPTY)).decode().strip()) != 0:

@@ -3,7 +3,7 @@ Clone Coolify
 
 **Select your applications. Copy their configuration and data. Stay in control.**
 
-Italiano e English · Version 0.7.0 · Experimental / Sperimentale
+Italiano e English · Version 0.7.1 · Experimental / Sperimentale
 
 Italiano
 --------
@@ -42,9 +42,9 @@ Recupero del ripristino PostgreSQL
 
 Gli aggiornamenti minori PostgreSQL della stessa versione principale sono
 accettati dopo verifica SQL, anche se le immagini Docker differiscono.
-Per il precedente blocco immagine, Operazioni può offrire Riprendi ripristino:
-riusa il backup conservato soltanto per risorse del job ancora ferme e un
-database vuoto, con conferma esplicita. La sorgente non viene fermata
+Per blocchi immagine o avvio precedenti al ripristino, Operazioni può offrire Riprendi ripristino:
+riusa il backup conservato soltanto se le applicazioni del job non sono
+mai state avviate e il database è vuoto, con conferma esplicita. La sorgente non viene fermata
 e le scritture successive al backup non sono incluse. Il recupero è limitato
 a un database PostgreSQL e applicazioni senza volumi.
 
@@ -134,10 +134,10 @@ PostgreSQL restoration recovery
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Minor PostgreSQL updates within the same major version are accepted after
-SQL verification, even when Docker image hashes differ. For the previous
-image-check failure, Operations may offer Resume restoration: it reuses
-the retained backup only for this job’s stopped resources and an empty
-database, with explicit confirmation. The source stays running, and later
+SQL verification, even when Docker image hashes differ. For image-check or startup failures before restoration,
+Operations may offer Resume restoration: it reuses
+the retained backup only if the job’s destination applications have never
+been started and the database is empty, with explicit confirmation. The source stays running, and later
 writes are not included. Recovery is limited to one PostgreSQL database
 and applications without volumes.
 
@@ -194,12 +194,12 @@ must remain local.
 Validation / Verifiche
 ---------------------
 
-74 Python tests and 13 JavaScript tests passed for the application code;
+80 Python tests and 13 JavaScript tests passed for the application code;
 read-only API/SSH analysis was checked on Coolify 4.7.6. A full production
 migration has not been run to validate this release. Test a complete clone
 on disposable instances before operational use.
 
-74 test Python e 13 JavaScript superati per il codice applicativo;
+80 test Python e 13 JavaScript superati per il codice applicativo;
 analisi API/SSH in sola lettura verificata su Coolify 4.7.6.
 La release non è stata collaudata con una migrazione completa in produzione:
 provare prima una clonazione su istanze usa-e-getta.

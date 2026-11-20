@@ -105,19 +105,30 @@ def remap(value, mapping):
     return value
 
 
-def wait_container(ssh, uid, timeout=240):
+def container_generation(container):
+    return (container.get('Id'), container.get('State', {}).get('StartedAt'))
+
+
+def wait_container(ssh, uid, timeout=240, previous_generation=None):
     deadline = time.monotonic() + timeout
+    unhealthy = False
     while time.monotonic() < deadline:
         matches = [c for c in ssh.containers() if container_matches(c, uid)]
         if len(matches) == 1:
             c = matches[0]
+            # Coolify's start endpoint queues a task. Do not accept the old
+            # generation while that task is still replacing/restarting it.
+            if previous_generation is not None and container_generation(c) == previous_generation:
+                time.sleep(2)
+                continue
             state = c.get("State", {})
             health = state.get("Health", {}).get("Status")
             if state.get("Running") and health in (None, "healthy"):
                 return c
-            if health == "unhealthy" or state.get("Status") == "dead":
-                raise CloneError("Container destinazione non sano")
+            unhealthy = unhealthy or health == 'unhealthy' or state.get('Status') == 'dead'
         time.sleep(2)
+    if unhealthy:
+        raise CloneError("Container destinazione non sano")
     raise CloneError("Timeout di avvio della risorsa destinazione")
 
 
