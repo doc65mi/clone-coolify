@@ -18,6 +18,9 @@ if env_file.exists():
         secrets.extend(config['token'] for config in connections.values() if config.get('token'))
 errors = []
 for path in filter(None, paths):
+    if path == 'ssh/.gitkeep':
+        assert not subprocess.check_output(['git', 'show', ':' + path], cwd=root)
+        continue
     lower = path.lower()
     if (lower.startswith(('data/', 'ssh/', '.venv/')) or lower == '.env' or
         (lower.startswith('.env.') and lower != '.env.example') or
