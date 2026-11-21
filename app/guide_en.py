@@ -26,9 +26,9 @@ SECTIONS = [
                'Each server needs Docker CLI, Python 3.8+ and GNU tar with ACL and xattr support. Databases need their native dump and restore tools.',
                'API and SSH must reach the same host. External proxies on different IP addresses and multi-server instances are not supported in this release.',
                'The status checks here only verify local file presence. SSH access, permissions and host identities are checked during Analyze selection.']},
-    {'title': 'Save connections and analyze', 'text':
-     'Open Connections and complete both cards. If Coolify manages one server, its UUID is selected automatically. To update connections, enter both tokens again: stored tokens are not displayed.',
-     'items': ['Save connections does not contact or modify the servers.',
+    {'title': 'Save servers and choose roles', 'text':
+     'In Connections, add or edit a saved server with its URL, API token and SSH settings. Leave an existing profile’s token empty to keep it. In Overview, choose source and destination from the list, one row per server, and choose Apply roles. Selecting roles does not require entering credentials again.',
+     'items': ['Save server and Apply roles save local settings: they do not contact or modify the servers.',
                'In Overview, choose Load source resources and select applications: databases with recognized references appear below their app and are included automatically.',
                'Shared databases remain selected while a chosen app requires them. Internal stack databases are included with their stack; databases without a verified link remain separate and can be selected manually.',
                'Analyze selection reads API and Docker information via SSH without remote changes. Excluded resources are neither created nor stopped.',

@@ -1,6 +1,6 @@
 # Clone Coolify
 
-Applicazione self-hosted per analizzare e copiare applicazioni e database tra due installazioni Coolify indipendenti. Backend Python/FastAPI, interfaccia web in italiano e inglese e backup cifrati. Versione **0.8.0**, sperimentale.
+Applicazione self-hosted per analizzare e copiare applicazioni e database tra due installazioni Coolify indipendenti. Backend Python/FastAPI, interfaccia web in italiano e inglese e backup cifrati. Versione **0.8.1**, sperimentale.
 
 ## Lingua dell’app
 
@@ -31,7 +31,7 @@ Per Docker, dopo aver creato `.env` e configurato `ssh/`, usa `docker compose up
 
 ## Server salvati e ruoli
 
-In **Connessioni**, salva più installazioni Coolify con nomi riconoscibili. Ogni profilo conserva URL, token cifrato, UUID e impostazioni SSH. In **Server salvati e ruoli**, scegli il **Trasmittente (sorgente)** e il **Ricevente (destinazione)**; premi **Applica ruoli**. **Inverti ruoli** scambia soltanto le selezioni fino alla conferma.
+In **Connessioni**, salva più installazioni Coolify con nomi riconoscibili. Ogni profilo conserva URL, token cifrato, UUID e impostazioni SSH. In **Panoramica → Scegli trasmittente e ricevente**, una riga per server, scegli il **Trasmittente (sorgente)** e il **Ricevente (destinazione)**; premi **Applica ruoli**. **Inverti ruoli** scambia soltanto le selezioni fino alla conferma.
 
 Puoi aggiungere un altro trasmittente o usare un profilo come ricevente. Il ricevente deve ancora essere vuoto e il suo token deve consentire `read:sensitive`, `write` e `deploy`: cambiare ruolo non modifica i permessi del token. Le chiavi SSH rimangono associate al profilo. Aggiungi i nuovi file chiave in `ssh/` e le host key verificate a `known_hosts`.
 
@@ -75,3 +75,5 @@ node --check app/static/app.js
 Un tag mobile può scaricare aggiornamenti minori diversi sui due server senza modifiche del database. Per PostgreSQL il dump logico viene ripristinato dopo verifica della stessa versione principale. In Operazioni, **Riprendi ripristino** è disponibile per i blocchi immagine, healthcheck o timeout avvenuti prima di qualsiasi ripristino, con un PostgreSQL e applicazioni senza volumi. Riutilizza il backup originale, verifica risorse e database vuoto e non ferma la sorgente. Richiede conferma esplicita; la copia non comprende le scritture successive al backup. Altre condizioni bloccano il recupero; nessuna cancellazione automatica dei tentativi falliti.
 
 Il recupero riutilizza il database del job se è già avviato e sano, senza riaccodare un avvio Coolify. Quando serve avviarlo, attende la nuova generazione del container e la stabilizzazione del controllo di salute fino al timeout; un healthcheck transitorio non interrompe subito la copia. Database popolati, app destinazione già avviate e modifiche alle configurazioni bloccano comunque il recupero.
+
+Connessioni contiene soltanto la gestione dei profili salvati. I moduli separati di API per sorgente e destinazione sono stati rimossi: in Panoramica i ruoli riutilizzano le credenziali conservate. Prima di confermare una nuova coppia, lettura risorse e clonazione restano disabilitate per evitare di usare il server precedente.

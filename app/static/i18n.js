@@ -180,6 +180,15 @@ const CloneI18n = (() => {
   return {t, capture, apply, setLanguage, get language(){return language;}, get locale(){return language === 'en' ? 'en-GB' : 'it-IT';}, en, rebuildPatterns};
 })();
 Object.assign(CloneI18n.en, {
+  'Premi Applica ruoli per usare la nuova scelta. Le credenziali salvate vengono riutilizzate.':'Choose Apply roles to use this selection. Stored credentials will be reused.',
+  'Scegli trasmittente e ricevente':'Choose source and destination',
+  'Una riga per ogni server salvato. Scegli i ruoli senza reinserire le credenziali.':'One row per saved server. Choose roles without entering credentials again.',
+  'Server salvato':'Saved server',
+  'Salva almeno due server in Connessioni per scegliere i ruoli.':'Save at least two servers in Connections to choose roles.',
+  'I tuoi server, salvati una volta.':'Your servers, saved once.',
+  'Qui salvi e modifichi i server. La scelta di trasmittente e ricevente si trova in Panoramica.':'Save and edit servers here. Choose source and destination in Overview.',
+  'Trasmittente: {name}':'Source: {name}', 'Ricevente: {name}':'Destination: {name}',
+
   'Server salvati e ruoli':'Saved servers and roles',
   'Salva più istanze Coolify e scegli quale trasmette e quale riceve per la prossima copia.':'Save multiple Coolify instances and choose the source and destination for the next copy.',
   'Trasmittente (sorgente)':'Transmitting server (source)', 'Ricevente (destinazione)':'Receiving server (destination)',

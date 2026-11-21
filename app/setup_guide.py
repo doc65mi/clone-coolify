@@ -29,9 +29,9 @@ SECTIONS = [
                "Ogni server richiede Docker CLI, Python 3.8+ e GNU tar con supporto ACL e xattrs. I database richiedono i relativi strumenti di dump e ripristino.",
                "API e SSH devono raggiungere lo stesso host. Proxy esterni su IP differenti e istanze multi-server non sono supportati in questa release.",
                "Il controllo qui sotto verifica solo la presenza locale dei file. Accesso SSH, autorizzazioni e impronte vengono verificati durante Analizza selezione."]},
-    {"title": "Salva le connessioni e analizza", "text":
-     "Apri Connessioni e completa le due schede. Se Coolify gestisce un solo server, l'UUID del server viene selezionato automaticamente. Per aggiornare le connessioni devi reinserire entrambi i token: quelli salvati non vengono mostrati.",
-     "items": ["Salva connessioni non contatta e non modifica i server.",
+    {"title": "Salva i server e scegli i ruoli", "text":
+     "In Connessioni aggiungi o modifica un server salvato con URL, token API e SSH. Lascia vuoto il token di un profilo esistente per conservarlo. In Panoramica scegli trasmittente e ricevente nell’elenco, una riga per server, e premi Applica ruoli. Non devi reinserire le credenziali per scegliere i ruoli.",
+     "items": ["Salva server e Applica ruoli salvano impostazioni locali: non contattano e non modificano i server.",
                "Nella Panoramica usa Carica elenco sorgente e spunta le applicazioni da copiare: i database con un riferimento riconosciuto vengono mostrati sotto l'app e inclusi automaticamente.",
                "I database condivisi restano selezionati finché richiesti da un'app scelta. Quelli interni agli stack sono inclusi con lo stack; quelli senza collegamento verificato restano separati e selezionabili manualmente.",
                "Analizza selezione legge API e Docker via SSH, senza modifiche remote. Le risorse escluse non vengono create né fermate.",

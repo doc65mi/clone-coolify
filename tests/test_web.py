@@ -51,7 +51,7 @@ def test_index_and_security_headers(client):
     assert response.status_code == 200
     assert 'lang="it"' in response.text
     assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
-    assert client.get("/health").json()["version"] == "0.8.0"
+    assert client.get("/health").json()["version"] == "0.8.1"
 
 
 def test_english_guide_is_authenticated_and_does_not_change_connections(client):

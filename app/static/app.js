@@ -3,7 +3,8 @@ const t = CloneI18n.t;
 CloneI18n.capture(document.body);
 let guideData = null;
 let serverProfiles = [], selectedProfileIds = {source:null,target:null};
-let jobsBusy = false;
+let jobsBusy = false, rolesSaving = false;
+let connectionRevision = 0;
 const connectionKeys=['url','token','server_uuid','ssh_host','ssh_user','ssh_key','ssh_port','sudo','allow_http'];
 let csrf = '', currentPlan = null, activeTab = 'overview', polling = null;
 let hasConnections = false;
@@ -33,21 +34,13 @@ function field(role, key, label, type='text', placeholder='', value='') {
   l.append(input); return l;
 }
 function checkbox(role, key, label) { const l = element('label', undefined, 'check'); const input = element('input'); input.type='checkbox'; input.id=`${role}-${key}`; l.append(input, element('span',label)); return l; }
-function connectionForms() {
-  for (const role of ['source','target']) {
-    const card = element('article',undefined,'panel connection-card'); card.append(element('span', role === 'source' ? t('SORGENTE') : t('DESTINAZIONE'), role === 'source' ? 'pill' : 'pill orange'), element('h2',role === 'source' ? t('Il server da copiare') : t('Il nuovo server')));
-    card.append(field(role,'url',t('URL Coolify'),'url','https://coolify.example.it'), field(role,'token',t('Token API'),'password',t('Token con visibilità completa')), field(role,'server_uuid',t('UUID server Coolify (facoltativo)'),'text',t('Automatico se è presente un solo server')), field(role,'ssh_host',t('IP o hostname SSH'),'text','203.0.113.10'));
-    const row = element('div',undefined,'field-row'); row.append(field(role,'ssh_port',t('Porta SSH'),'number','22','22'),field(role,'ssh_user',t('Utente SSH'),'text','root','root')); card.append(row,field(role,'ssh_key',t('Nome del file chiave in ssh/'),'text',`${role}_ed25519`,`${role}_ed25519`),checkbox(role,'sudo',t('Usa sudo non interattivo per i comandi remoti')),checkbox(role,'allow_http',t('Consenti API HTTP su rete fidata (token non cifrato in transito)')));
-    $('#connection-fields').append(card);
-  }
-}
 function profileEditorFields() {
   const role='profile', container=$('#profile-fields');
   container.append(field(role,'url',t('URL Coolify'),'url','https://coolify.example.it'),field(role,'token',t('Token API'),'password',t('Token con visibilità completa')),field(role,'server_uuid',t('UUID server Coolify (facoltativo)'),'text',t('Automatico se è presente un solo server')),field(role,'ssh_host',t('IP o hostname SSH'),'text','203.0.113.10'),field(role,'ssh_port',t('Porta SSH'),'number','22','22'),field(role,'ssh_user',t('Utente SSH'),'text','root','root'),field(role,'ssh_key',t('Nome del file chiave in ssh/'),'text','coolify_server_ed25519'),checkbox(role,'sudo',t('Usa sudo non interattivo per i comandi remoti')),checkbox(role,'allow_http',t('Consenti API HTTP su rete fidata (token non cifrato in transito)')));
 }
 function clearSelectionForConnections() {
+  connectionRevision++;
   sourceResources=[];selectedUuids.clear();selectionModel=new CloneSelection();renderPlan(null);renderSelection();
-  for(const role of ['source','target'])$(`#${role}-token`).value='';
 }
 function fillProfileEditor() {
   const profile=serverProfiles.find(p=>p.id===$('#profile-editor').value);
@@ -57,21 +50,28 @@ function fillProfileEditor() {
   $('#profile-token').required=!profile;
   $('#profile-message').textContent='';
 }
-function renderServerChoices() {
-  const editorValue=$('#profile-editor').value;
-  for(const role of ['source','target']){
-    const select=$(`#${role}-profile`);select.replaceChildren();const empty=element('option',t('Seleziona un server salvato'));empty.value='';select.append(empty);
-    for(const profile of serverProfiles){const option=element('option',`${profile.name} — ${profile.connection.url}`);option.value=profile.id;select.append(option);}
-    select.value=selectedProfileIds[role]||'';
+function rolesAreApplied(){const draft=roleChoices();return !!draft.source&&!!draft.target&&draft.source===selectedProfileIds.source&&draft.target===selectedProfileIds.target;}
+function refreshRoleActions(){const ready=rolesAreApplied()&&!rolesSaving&&!jobsBusy;$('#load-resources').disabled=!ready||resourceLoading;$('#analyze').disabled=!ready||analysisLoading||!selectedUuids.size;$('#open-execute').disabled=!ready||!currentPlan||!!currentPlan.blocks.length;}
+function draftRolesChanged(){clearSelectionForConnections();refreshRoleActions();$('#roles-message').textContent=t('Premi Applica ruoli per usare la nuova scelta. Le credenziali salvate vengono riutilizzate.');}
+function roleChoices(){return Object.fromEntries(['source','target'].map(role=>[role,document.querySelector(`input[name="${role}-profile"]:checked`)?.value||'']));}
+function selectRole(role,id){const input=[...document.querySelectorAll(`input[name="${role}-profile"]`)].find(input=>input.value===id);if(input)input.checked=true;}
+function renderServerChoices(draft=selectedProfileIds) {
+  const editorValue=$('#profile-editor').value, rows=$('#server-role-rows');rows.replaceChildren();
+  for(const profile of serverProfiles){
+    const row=element('tr'),name=element('td');name.append(element('strong',profile.name),element('small',profile.connection.url));row.append(name);
+    for(const role of ['source','target']){const cell=element('td'),label=element('label',undefined,'server-role-choice'),input=element('input');input.type='radio';input.name=`${role}-profile`;input.value=profile.id;input.checked=draft[role]===profile.id;input.required=true;input.disabled=jobsBusy;input.onchange=draftRolesChanged;input.setAttribute('aria-label',t(role==='source'?'Trasmittente: {name}':'Ricevente: {name}',{name:profile.name}));label.append(input);cell.append(label);row.append(cell);}
+    rows.append(row);
   }
+  $('#server-role-empty').hidden=serverProfiles.length>=2;
   const editor=$('#profile-editor');editor.replaceChildren();const create=element('option',t('Nuovo server'));create.value='';editor.append(create);
   for(const profile of serverProfiles){const option=element('option',profile.name);option.value=profile.id;editor.append(option);}
   editor.value=serverProfiles.some(p=>p.id===editorValue)?editorValue:'';
-  $('#apply-roles').disabled=jobsBusy||serverProfiles.length<2;$('#swap-roles').disabled=jobsBusy||serverProfiles.length<2;$('#save-profile').disabled=jobsBusy;
+  $('#apply-roles').disabled=jobsBusy||serverProfiles.length<2;$('#swap-roles').disabled=jobsBusy||serverProfiles.length<2;$('#save-profile').disabled=jobsBusy;refreshRoleActions();
 }
 async function loadServerProfiles(){const data=await api('/servers');serverProfiles=data.profiles;selectedProfileIds={source:data.source_id,target:data.target_id};renderServerChoices();}
 function readConnectionFields(role){return Object.fromEntries(connectionKeys.map(key=>{const input=$(`#${role}-${key}`);return [key,input.type==='checkbox'?input.checked:key==='ssh_port'?Number(input.value):input.value.trim()];}));}
-async function loadConfig() { await loadServerProfiles(); const data = await api('/config'); hasConnections=data.configured; $('#setup-prompt').hidden=hasConnections || activeTab!=='overview'; for (const role of ['source','target']) { const config=data.connections[role]; if (!config) continue; for (const [key,value] of Object.entries(config)) { const input=$(`#${role}-${key}`); if (input) { if (input.type === 'checkbox') input.checked = value; else input.value = value; } } $(`#${role}-summary-url`).textContent=config.url; $(`#${role}-state`).textContent=t('Configurata · da verificare'); } }
+async function loadConfig() {await loadServerProfiles();const data=await api('/config');hasConnections=data.configured;$('#setup-prompt').hidden=hasConnections||activeTab!=='overview';for(const role of ['source','target']){const config=data.connections[role];if(config){$(`#${role}-summary-url`).textContent=config.url;$(`#${role}-state`).textContent=t('Configurata · da verificare');}}}
+
 async function loadGuide() {
   const language=CloneI18n.language; const data=await api('/setup?language='+language); if(language!==CloneI18n.language)return; guideData=data; renderGuide(data);
 }
@@ -110,17 +110,18 @@ function renderSelection() {
   const countResources=sourceResources.length?sourceResources:(currentPlan?.resources||[]);
   const applications=countResources.filter(row=>row.group!=='databases'&&selectedUuids.has(row.uuid)).length;
   const databases=countResources.filter(row=>row.group==='databases'&&selectedUuids.has(row.uuid)).length+countResources.filter(row=>selectedUuids.has(row.uuid)).reduce((total,row)=>total+(row.embedded_databases||[]).length,0);
-  $('#selection-count').textContent=selectedUuids.size?t('{apps} {appLabel} · {dbs} {dbLabel}', {apps:applications,appLabel:t(applications===1?'applicazione/stack':'applicazioni/stack'),dbs:databases,dbLabel:t(databases===1?'database selezionato':'database selezionati')}):t('Nessuna risorsa selezionata');$('#analyze').disabled=!selectedUuids.size || analysisLoading;
+  $('#selection-count').textContent=selectedUuids.size?t('{apps} {appLabel} · {dbs} {dbLabel}', {apps:applications,appLabel:t(applications===1?'applicazione/stack':'applicazioni/stack'),dbs:databases,dbLabel:t(databases===1?'database selezionato':'database selezionati')}):t('Nessuna risorsa selezionata');$('#analyze').disabled=!selectedUuids.size || analysisLoading;refreshRoleActions();
 }
 async function loadResources() {
-  const b=$('#load-resources');resourceLoading=true;b.disabled=true;b.textContent=t('Lettura sorgente…');
-  try{const data=await post('/resources');sourceResources=data.resources;selectionModel=new CloneSelection(sourceResources,[...selectedUuids]);selectionChanged();if(!sourceResources.length)$('#selection-empty').textContent=t('Nessuna applicazione, database o stack visibile al token sorgente.');notify(t('Elenco caricato. Selezionando un’app includi anche i suoi database collegati.'));}catch(e){notify(e.message,true);}finally{resourceLoading=false;b.disabled=false;b.textContent=t('Carica elenco sorgente');}
+  const revision=connectionRevision;const b=$('#load-resources');resourceLoading=true;b.disabled=true;b.textContent=t('Lettura sorgente…');
+  try{const data=await post('/resources');if(revision!==connectionRevision)return;sourceResources=data.resources;selectionModel=new CloneSelection(sourceResources,[...selectedUuids]);selectionChanged();if(!sourceResources.length)$('#selection-empty').textContent=t('Nessuna applicazione, database o stack visibile al token sorgente.');notify(t('Elenco caricato. Selezionando un’app includi anche i suoi database collegati.'));}catch(e){notify(e.message,true);}finally{resourceLoading=false;b.textContent=t('Carica elenco sorgente');refreshRoleActions();}
 }
 function renderPlan(plan) {
   $('#analysis-notice').hidden=true;
   currentPlan=plan; $('#resource-rows').replaceChildren(); $('#plan-blocks').replaceChildren(); $('#plan-warnings').replaceChildren();
   $('#empty-plan').hidden=!!plan; $('#plan-content').hidden=!plan; $('#open-execute').disabled=!plan || !!plan.blocks.length;
   for (const [id,value] of [['resources',plan?.resources.length],['volumes',plan?.resources.filter(r=>r.group==='applications').reduce((a,r)=>a+r.volumes,0)],['blocks',plan?.blocks.length]]) $(`#stat-${id}`).textContent=value ?? '—';
+  refreshRoleActions();
   if (!plan) return;
   for (const row of plan.resources) { const tr=element('tr'), name=element('td'); name.append(element('strong',row.name),element('small',row.uuid)); const state=element('td',row.blocks.length ? t('Da risolvere') : t('Pronta'),row.blocks.length ? 'bad':'ok'); tr.append(name,element('td',row.group === 'databases' ? row.kind : row.kind==='github'?'GitHub / Dockerfile':'Docker Image'),element('td',t('{volumes} vol. · {variables} var.', {volumes:row.volumes,variables:row.variables})),state); $('#resource-rows').append(tr); }
   for (const message of plan.blocks) $('#plan-blocks').append(element('div',t(message),'block'));
@@ -130,7 +131,7 @@ function renderPlan(plan) {
 }
 const statuses={queued:'In coda',running:'In corso',failed:'Non completata',copied:'Copiata · verifica finale richiesta',interrupted:'Interrotta · controlla la sorgente'};
 async function refreshJobs() {
-  const result=await api('/jobs'); jobsBusy=result.busy;$('#apply-roles').disabled=jobsBusy||serverProfiles.length<2;$('#swap-roles').disabled=jobsBusy||serverProfiles.length<2;$('#save-profile').disabled=jobsBusy; $('#job-count').textContent=result.jobs.length; $('#jobs').replaceChildren();
+  const result=await api('/jobs'); jobsBusy=result.busy;for(const input of document.querySelectorAll('#server-role-rows input'))input.disabled=jobsBusy;$('#apply-roles').disabled=jobsBusy||serverProfiles.length<2;$('#swap-roles').disabled=jobsBusy||serverProfiles.length<2;$('#save-profile').disabled=jobsBusy; $('#job-count').textContent=result.jobs.length; $('#jobs').replaceChildren();
   if (!result.jobs.length) { const empty=element('div',undefined,'panel empty'); empty.append(element('h3',t('Nessuna clonazione avviata')),element('p',t('Le operazioni appariranno qui con il loro stato e il registro degli eventi.'))); $('#jobs').append(empty); }
   for (const job of result.jobs) {
     const card=element('article',undefined,'panel job-card'), top=element('div',undefined,'job-top'), info=element('div'); info.append(element('h2',job.id.slice(0,12)),element('small',new Date(job.created*1000).toLocaleString(CloneI18n.locale))); top.append(info,element('span',t(statuses[job.status] || job.status),'pill')); const progress=element('progress',undefined,'job-progress'); progress.max=100; progress.value=job.data.progress||0; progress.setAttribute('aria-label',t('Avanzamento clonazione')); card.append(top,progress,element('p',t('Fase: {phase}', {phase:t(job.data.phase)}),'muted'));
@@ -144,18 +145,16 @@ async function refreshJobs() {
     if (job.data.backups?.length) { const details=element('details'),summary=element('summary',t('{count} backup cifrati conservati', {count:job.data.backups.length}));details.append(summary);for(const artifact of job.data.backups){const p=element('p',`${artifact.file} · ${(artifact.bytes/1048576).toFixed(1)} MiB · SHA256 ${artifact.sha256}`,'muted');details.append(p);}card.append(details); }
     $('#jobs').append(card);
   }
-  if(result.busy) $('#open-execute').disabled=true;
+  refreshRoleActions();
 }
-async function enter() { $('#login-screen').hidden=true; $('#workspace').hidden=false;await loadConfig();const plan=await api('/plan');if(plan){selectedUuids.clear();for(const row of plan.resources)selectedUuids.add(row.uuid);}renderPlan(plan);renderSelection();await refreshJobs();tab(hasConnections?'overview':'guide');if(polling)clearInterval(polling);polling=setInterval(()=>{if(activeTab==='history'||activeTab==='connections')refreshJobs().catch(()=>{});},5000); }
-connectionForms();
+async function enter() { $('#login-screen').hidden=true; $('#workspace').hidden=false;await loadConfig();const plan=await api('/plan');if(plan){selectedUuids.clear();for(const row of plan.resources)selectedUuids.add(row.uuid);}renderPlan(plan);renderSelection();await refreshJobs();tab(hasConnections?'overview':'guide');if(polling)clearInterval(polling);polling=setInterval(()=>{if(activeTab==='history'||activeTab==='connections'||activeTab==='overview')refreshJobs().catch(()=>{});},5000); }
 profileEditorFields();
 CloneI18n.capture($('#profile-fields'));
-CloneI18n.capture($('#connection-fields'));
 CloneI18n.apply();
 for (const selector of document.querySelectorAll('.language-select')) selector.onchange=()=>{
   CloneI18n.setLanguage(selector.value);
   $('#roles-message').textContent='';$('#profile-message').textContent='';
-  const draftRoles={source:$('#source-profile').value,target:$('#target-profile').value};renderServerChoices();$('#source-profile').value=draftRoles.source;$('#target-profile').value=draftRoles.target;
+  const draftRoles=roleChoices();renderServerChoices(draftRoles);
   renderSelection(); renderPlan(currentPlan);
   $('#load-resources').disabled=resourceLoading;
   $('#load-resources').textContent=t(resourceLoading?'Lettura sorgente…':'Carica elenco sorgente');
@@ -165,6 +164,7 @@ for (const selector of document.querySelectorAll('.language-select')) selector.o
   $('#page-label').textContent=t({overview:t('Panoramica'),connections:t('Connessioni'),history:t('Operazioni'),guide:t('Guida e istruzioni')}[activeTab]);
   if(guideData)loadGuide().catch(e=>notify(e.message,true));
   if(csrf)refreshJobs().catch(e=>notify(e.message,true));
+  refreshRoleActions();
 };
 for(const button of document.querySelectorAll('[data-tab]'))button.onclick=()=>tab(button.dataset.tab);
 $('#open-connections').onclick=()=>tab('connections');
@@ -176,15 +176,14 @@ $('#guide-connections').onclick=()=>tab('connections');
 $('#refresh-setup').onclick=async()=>{const b=$('#refresh-setup');b.disabled=true;try{await loadGuide();notify(t('Stato locale aggiornato. Nessuna connessione ai server eseguita.'));}catch(e){notify(e.message,true);}finally{b.disabled=false;}};
 $('#login-form').onsubmit=async event=>{event.preventDefault();const b=event.submitter;b.disabled=true;$('#login-error').textContent='';try{const data=await post('/login',{password:$('#password').value});csrf=data.csrf;$('#password').value='';await enter();}catch(e){$('#login-error').textContent=t(e.message);}finally{b.disabled=false;}};
 $('#logout').onclick=async()=>{try{await post('/logout');}finally{csrf='';showLogin();}};
-$('#connections-form').onsubmit=async event=>{event.preventDefault();const data={};for(const role of ['source','target']){data[role]={};for(const key of ['url','token','server_uuid','ssh_host','ssh_user','ssh_key','ssh_port','sudo','allow_http']){const input=$(`#${role}-${key}`);data[role][key]=input.type==='checkbox'?input.checked:key==='ssh_port'?Number(input.value):input.value.trim();}}const b=event.submitter;b.disabled=true;try{await post('/config',data);for(const role of ['source','target'])$(`#${role}-token`).value='';sourceResources=[];selectedUuids.clear();renderSelection();renderPlan(null);await loadConfig();notify(t('Connessioni salvate in forma cifrata. Ora carica l’elenco e scegli cosa clonare.'));tab('overview');}catch(e){notify(e.message,true);}finally{b.disabled=false;}};
-$('#analyze').onclick=async()=>{const b=$('#analyze');if(!selectedUuids.size){analysisNotify(t('Seleziona almeno una risorsa da clonare.'),true);return;}analysisLoading=true;b.disabled=true;b.textContent=t('Analisi in corso…');analysisNotify(t('Verifica API, SSH e selezione in corso. I server non vengono modificati.'));try{const p=await post('/plan',{preserve_domains:$('#preserve-domains').checked,resource_uuids:[...selectedUuids]});renderPlan(p);analysisNotify(p.blocks.length?t('Analisi completata: {count} controlli da risolvere.', {count:p.blocks.length}):t('Analisi completata: piano pronto per la revisione.'),!!p.blocks.length);}catch(e){renderPlan(null);analysisNotify(e.message,true);}finally{analysisLoading=false;b.disabled=!selectedUuids.size;b.textContent=t('Analizza selezione');}};
+$('#analyze').onclick=async()=>{const revision=connectionRevision;const b=$('#analyze');if(!selectedUuids.size){analysisNotify(t('Seleziona almeno una risorsa da clonare.'),true);return;}analysisLoading=true;b.disabled=true;b.textContent=t('Analisi in corso…');analysisNotify(t('Verifica API, SSH e selezione in corso. I server non vengono modificati.'));try{const p=await post('/plan',{preserve_domains:$('#preserve-domains').checked,resource_uuids:[...selectedUuids]});if(revision!==connectionRevision)return;renderPlan(p);analysisNotify(p.blocks.length?t('Analisi completata: {count} controlli da risolvere.', {count:p.blocks.length}):t('Analisi completata: piano pronto per la revisione.'),!!p.blocks.length);}catch(e){renderPlan(null);analysisNotify(e.message,true);}finally{analysisLoading=false;b.textContent=t('Analizza selezione');refreshRoleActions();}};
 $('#preserve-domains').onchange=()=>{renderPlan(null);notify(t('Opzioni modificate: ripeti l’analisi prima della copia.'));};
 $('#open-execute').onclick=()=>{$('#execute-form').reset();$('#execute-dialog').showModal();};
 $('#cancel-execute').onclick=()=>$('#execute-dialog').close();
 $('#execute-form').onsubmit=async event=>{event.preventDefault();const b=event.submitter;b.disabled=true;try{await post('/execute',{plan_id:currentPlan?.id,confirmation:$('#confirmation').value,downtime_accepted:$('#accept-downtime').checked,external_writers_stopped:$('#accept-writers').checked});$('#execute-dialog').close();renderPlan(null);tab('history');notify(t('Clonazione avviata. Puoi seguire l’avanzamento nel registro.'));}catch(e){$('#execute-dialog').close();notify(e.message,true);}finally{b.disabled=false;}};
 $('#profile-editor').onchange=fillProfileEditor;
-$('#swap-roles').onclick=()=>{const source=$('#source-profile'),target=$('#target-profile');[source.value,target.value]=[target.value,source.value];$('#roles-message').textContent=t('Ruoli invertiti nella selezione. Premi Applica ruoli per confermare.');};
-$('#roles-form').onsubmit=async event=>{event.preventDefault();const b=event.submitter;b.disabled=true;try{await post('/server-roles',{source_id:$('#source-profile').value,target_id:$('#target-profile').value});clearSelectionForConnections();await loadConfig();$('#roles-message').textContent=t('Ruoli salvati. Ricarica l’elenco e ripeti l’analisi prima della copia.');}catch(e){$('#roles-message').textContent=t(e.message);}finally{b.disabled=jobsBusy||serverProfiles.length<2;}};
+$('#swap-roles').onclick=()=>{const draft=roleChoices();selectRole('source',draft.target);selectRole('target',draft.source);draftRolesChanged();$('#roles-message').textContent=t('Ruoli invertiti nella selezione. Premi Applica ruoli per confermare.');};
+$('#roles-form').onsubmit=async event=>{event.preventDefault();const b=event.submitter;b.disabled=true;rolesSaving=true;refreshRoleActions();try{await post('/server-roles',{source_id:roleChoices().source,target_id:roleChoices().target});clearSelectionForConnections();await loadConfig();$('#roles-message').textContent=t('Ruoli salvati. Ricarica l’elenco e ripeti l’analisi prima della copia.');}catch(e){$('#roles-message').textContent=t(e.message);}finally{rolesSaving=false;b.disabled=jobsBusy||serverProfiles.length<2;refreshRoleActions();}};
 $('#server-profile-form').onsubmit=async event=>{event.preventDefault();const b=event.submitter;b.disabled=true;try{const result=await post('/servers',{id:$('#profile-editor').value||null,name:$('#profile-name').value.trim(),connection:readConnectionFields('profile')});$('#profile-token').value='';clearSelectionForConnections();await loadConfig();$('#profile-editor').value=result.id;fillProfileEditor();$('#profile-message').textContent=t('Server salvato. Puoi sceglierlo come trasmittente o ricevente.');}catch(e){$('#profile-message').textContent=t(e.message);}finally{b.disabled=jobsBusy;}};
 $('#refresh-jobs').onclick=()=>refreshJobs().catch(e=>notify(e.message,true));
 $('#cancel-resume').onclick=()=>$('#resume-dialog').close();

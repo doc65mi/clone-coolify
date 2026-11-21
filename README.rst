@@ -3,7 +3,7 @@ Clone Coolify
 
 **Select your applications. Copy their configuration and data. Stay in control.**
 
-Italiano e English · Version 0.8.0 · Experimental / Sperimentale
+Italiano e English · Version 0.8.1 · Experimental / Sperimentale
 
 Italiano
 --------
@@ -11,8 +11,9 @@ Italiano
 Server salvati e scelta dei ruoli
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Salva più installazioni Coolify con nomi riconoscibili. In Connessioni
-scegli il Trasmittente e il Ricevente, anche invertendoli, e conferma
+Salva più installazioni Coolify con nomi riconoscibili in Connessioni.
+In Panoramica vedi una riga per server: scegli il Trasmittente e il Ricevente
+senza reinserire le API, anche invertendoli, e conferma
 con Applica ruoli. Le credenziali rimangono cifrate; modificando un
 profilo puoi lasciare vuoto il token per conservare quello salvato.
 
@@ -117,8 +118,9 @@ English
 Saved servers and role selection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Save multiple Coolify installations with recognizable names. In Connections,
-choose the source and destination, swap them if needed, and confirm with
+Save multiple Coolify installations with recognizable names in Connections.
+In Overview, choose source and destination from one row per server without
+entering API tokens again, swap them if needed, and confirm with
 Apply roles. Credentials stay encrypted. When editing an existing profile,
 leave the token empty to keep the stored one.
 

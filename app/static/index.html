@@ -27,7 +27,7 @@
         <button data-tab="guide" class="nav-item"><span>☷</span> Guida e istruzioni</button>
         <button data-tab="history" class="nav-item"><span>◷</span> Operazioni <span id="job-count" class="badge">0</span></button>
       </nav>
-      <div class="sidebar-bottom"><span class="pill">SELF-HOSTED</span><p>Copia i tuoi progetti.<br>Mantieni il controllo.</p><small id="version">v0.8.0</small><button id="logout" class="text-button">Esci dal workspace</button></div>
+      <div class="sidebar-bottom"><span class="pill">SELF-HOSTED</span><p>Copia i tuoi progetti.<br>Mantieni il controllo.</p><small id="version">v0.8.1</small><button id="logout" class="text-button">Esci dal workspace</button></div>
     </aside>
     <div class="main-shell">
       <header><div><span class="muted">Workspace</span><span class="breadcrumb">/</span><span id="page-label">Panoramica</span></div><div class="header-right"><label class="language-control"><span>Lingua</span><select class="language-select" aria-label="Lingua"><option value="it">Italiano</option><option value="en">English</option></select></label><span class="lock-icon">▣</span> Sessione privata <span class="avatar">AD</span></div></header>
@@ -37,6 +37,10 @@
         <section id="overview" class="tab-panel">
           <div class="page-heading"><div><p class="eyebrow">SERVER MIGRATION</p><h1>Porta tutto al prossimo server.</h1><p class="muted">Collega, verifica e prepara il clone. Un passaggio alla volta, con ogni operazione tracciata.</p></div><button id="open-connections" class="secondary">Configura connessioni</button></div>
           <div class="release-note"><span class="pill orange">RELEASE 0.8</span><span>PostgreSQL e GitHub/Dockerfile supportati nelle configurazioni compatibili. Analizza sempre la selezione prima della copia.</span></div>
+          <article class="panel server-profiles-panel" id="overview-servers">
+            <h2>Scegli trasmittente e ricevente</h2><p class="muted">Una riga per ogni server salvato. Scegli i ruoli senza reinserire le credenziali.</p>
+            <form id="roles-form"><div class="table-scroll"><table class="server-role-table"><thead><tr><th>Server salvato</th><th>Trasmittente (sorgente)</th><th>Ricevente (destinazione)</th></tr></thead><tbody id="server-role-rows"></tbody></table></div><p id="server-role-empty" class="muted" hidden>Salva almeno due server in Connessioni per scegliere i ruoli.</p><p class="muted">Il ricevente deve essere vuoto e avere un token con lettura, dati sensibili, scrittura e deploy. Cambiare ruolo non modifica i permessi del token.</p><div class="profile-actions"><button id="swap-roles" type="button" class="secondary">Inverti ruoli</button><button id="apply-roles" type="submit" class="primary">Applica ruoli</button></div><p id="roles-message" class="muted" role="status"></p></form>
+          </article>
           <div class="server-flow">
             <article class="server-card"><div class="card-top"><span class="server-glyph">▤</span><span class="pill">SORGENTE</span></div><h2>Da dove partiamo</h2><p id="source-summary-url" class="server-url">Istanza non collegata</p><div class="server-footer"><span id="source-state">In attesa di configurazione</span><small>API + SSH</small></div></article>
             <div class="flow-link" aria-hidden="true"><span>⇢</span><small>COPIA</small></div>
@@ -62,15 +66,12 @@
           <div id="plan-warnings" class="warnings"></div>
         </section>
         <section id="connections" class="tab-panel" hidden>
-          <div class="page-heading"><div><p class="eyebrow">CONNECTION SETUP</p><h1>Due istanze. Un collegamento.</h1><p class="muted">I token restano sul backend, cifrati. Le chiavi private si montano come file in sola lettura.</p></div></div>
+          <div class="page-heading"><div><p class="eyebrow">CONNECTION SETUP</p><h1>I tuoi server, salvati una volta.</h1><p class="muted">I token restano sul backend, cifrati. Le chiavi private si montano come file in sola lettura.</p></div></div>
           <button type="button" class="secondary guide-link" data-open-guide>Leggi le istruzioni per configurare i server</button>
           <div class="info-box"><strong>Prima di collegare i server</strong><p>Usa token con visibilità completa sulle risorse: lettura e dati sensibili sulla sorgente, anche scrittura e deploy sulla destinazione. Nella cartella <code>ssh/</code> inserisci le chiavi e il file <code>known_hosts</code>, dopo aver verificato le impronte SSH. Non usare il clone su uno dei workload da fermare.</p></div>
-          <article class="panel server-profiles-panel">
-            <h2>Server salvati e ruoli</h2><p class="muted">Salva più istanze Coolify e scegli quale trasmette e quale riceve per la prossima copia.</p>
-            <form id="roles-form"><div class="profile-role-grid"><label>Trasmittente (sorgente)<select id="source-profile" required></select></label><label>Ricevente (destinazione)<select id="target-profile" required></select></label></div><p class="muted">Il ricevente deve essere vuoto e avere un token con lettura, dati sensibili, scrittura e deploy. Cambiare ruolo non modifica i permessi del token.</p><div class="profile-actions"><button id="swap-roles" type="button" class="secondary">Inverti ruoli</button><button id="apply-roles" type="submit" class="primary">Applica ruoli</button></div><p id="roles-message" class="muted" role="status"></p></form>
-          </article>
-          <details class="panel server-profiles-panel"><summary>Aggiungi o modifica un server</summary><form id="server-profile-form"><div class="profile-role-grid"><label>Server da modificare<select id="profile-editor"></select></label><label>Nome riconoscibile<input id="profile-name" maxlength="80" required autocomplete="off"></label></div><p class="muted">Le credenziali restano cifrate. Per modificare un server già salvato puoi lasciare vuoto il token per conservarlo.</p><div id="profile-fields" class="profile-editor-grid"></div><div class="profile-actions"><button id="save-profile" type="submit" class="primary">Salva server</button></div><p id="profile-message" class="muted" role="status"></p></form></details>
-          <form id="connections-form"><div class="connection-grid" id="connection-fields"></div><div class="form-actions"><span class="muted">Per modificare le connessioni, reinserisci entrambi i token.</span><button class="primary" type="submit">Salva connessioni</button></div></form>
+
+          <p class="muted">Qui salvi e modifichi i server. La scelta di trasmittente e ricevente si trova in Panoramica.</p>
+          <details class="panel server-profiles-panel" open><summary>Aggiungi o modifica un server</summary><form id="server-profile-form"><div class="profile-role-grid"><label>Server da modificare<select id="profile-editor"></select></label><label>Nome riconoscibile<input id="profile-name" maxlength="80" required autocomplete="off"></label></div><p class="muted">Le credenziali restano cifrate. Per modificare un server già salvato puoi lasciare vuoto il token per conservarlo.</p><div id="profile-fields" class="profile-editor-grid"></div><div class="profile-actions"><button id="save-profile" type="submit" class="primary">Salva server</button></div><p id="profile-message" class="muted" role="status"></p></form></details>
         </section>
         <section id="history" class="tab-panel" hidden>
           <div class="page-heading"><div><p class="eyebrow">ACTIVITY LOG</p><h1>Ogni passaggio, visibile.</h1><p class="muted">Stato delle copie, backup e recupero della sorgente.</p></div><button id="refresh-jobs" class="secondary">Aggiorna</button></div>
