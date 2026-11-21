@@ -3,10 +3,23 @@ Clone Coolify
 
 **Select your applications. Copy their configuration and data. Stay in control.**
 
-Italiano e English · Version 0.7.1 · Experimental / Sperimentale
+Italiano e English · Version 0.8.0 · Experimental / Sperimentale
 
 Italiano
 --------
+
+Server salvati e scelta dei ruoli
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Salva più installazioni Coolify con nomi riconoscibili. In Connessioni
+scegli il Trasmittente e il Ricevente, anche invertendoli, e conferma
+con Applica ruoli. Le credenziali rimangono cifrate; modificando un
+profilo puoi lasciare vuoto il token per conservare quello salvato.
+
+Il ricevente deve essere vuoto e avere un token con scrittura e deploy,
+oltre a lettura e dati sensibili. Il cambio ruolo non amplia i permessi.
+Ogni profilo conserva la propria chiave SSH. Una sola coppia alla volta:
+il cambio invalida elenco e piano ed è bloccato durante le copie.
 
 Scopo del progetto
 ~~~~~~~~~~~~~~~~~~
@@ -101,6 +114,20 @@ devono rimanere locali.
 English
 -------
 
+Saved servers and role selection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Save multiple Coolify installations with recognizable names. In Connections,
+choose the source and destination, swap them if needed, and confirm with
+Apply roles. Credentials stay encrypted. When editing an existing profile,
+leave the token empty to keep the stored one.
+
+The destination must be empty and its token needs write and deploy access
+in addition to read and sensitive data. Changing roles does not expand
+permissions. Each profile keeps its own SSH key. Only one pair is active
+at a time: changes invalidate the selection and plan and are blocked
+during a copy.
+
 Project purpose
 ~~~~~~~~~~~~~~~
 
@@ -194,12 +221,12 @@ must remain local.
 Validation / Verifiche
 ---------------------
 
-80 Python tests and 13 JavaScript tests passed for the application code;
+92 Python tests and 13 JavaScript tests passed for the application code;
 read-only API/SSH analysis was checked on Coolify 4.7.6. A full production
 migration has not been run to validate this release. Test a complete clone
 on disposable instances before operational use.
 
-80 test Python e 13 JavaScript superati per il codice applicativo;
+92 test Python e 13 JavaScript superati per il codice applicativo;
 analisi API/SSH in sola lettura verificata su Coolify 4.7.6.
 La release non è stata collaudata con una migrazione completa in produzione:
 provare prima una clonazione su istanze usa-e-getta.

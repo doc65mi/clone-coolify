@@ -2,6 +2,9 @@
 const t = CloneI18n.t;
 CloneI18n.capture(document.body);
 let guideData = null;
+let serverProfiles = [], selectedProfileIds = {source:null,target:null};
+let jobsBusy = false;
+const connectionKeys=['url','token','server_uuid','ssh_host','ssh_user','ssh_key','ssh_port','sudo','allow_http'];
 let csrf = '', currentPlan = null, activeTab = 'overview', polling = null;
 let hasConnections = false;
 let resourceLoading = false, analysisLoading = false;
@@ -38,7 +41,37 @@ function connectionForms() {
     $('#connection-fields').append(card);
   }
 }
-async function loadConfig() { const data = await api('/config'); hasConnections=data.configured; $('#setup-prompt').hidden=hasConnections || activeTab!=='overview'; for (const role of ['source','target']) { const config=data.connections[role]; if (!config) continue; for (const [key,value] of Object.entries(config)) { const input=$(`#${role}-${key}`); if (input) { if (input.type === 'checkbox') input.checked = value; else input.value = value; } } $(`#${role}-summary-url`).textContent=config.url; $(`#${role}-state`).textContent=t('Configurata · da verificare'); } }
+function profileEditorFields() {
+  const role='profile', container=$('#profile-fields');
+  container.append(field(role,'url',t('URL Coolify'),'url','https://coolify.example.it'),field(role,'token',t('Token API'),'password',t('Token con visibilità completa')),field(role,'server_uuid',t('UUID server Coolify (facoltativo)'),'text',t('Automatico se è presente un solo server')),field(role,'ssh_host',t('IP o hostname SSH'),'text','203.0.113.10'),field(role,'ssh_port',t('Porta SSH'),'number','22','22'),field(role,'ssh_user',t('Utente SSH'),'text','root','root'),field(role,'ssh_key',t('Nome del file chiave in ssh/'),'text','coolify_server_ed25519'),checkbox(role,'sudo',t('Usa sudo non interattivo per i comandi remoti')),checkbox(role,'allow_http',t('Consenti API HTTP su rete fidata (token non cifrato in transito)')));
+}
+function clearSelectionForConnections() {
+  sourceResources=[];selectedUuids.clear();selectionModel=new CloneSelection();renderPlan(null);renderSelection();
+  for(const role of ['source','target'])$(`#${role}-token`).value='';
+}
+function fillProfileEditor() {
+  const profile=serverProfiles.find(p=>p.id===$('#profile-editor').value);
+  $('#profile-name').value=profile?.name||'';
+  const config=profile?.connection||{ssh_port:22,ssh_user:'root'};
+  for(const key of connectionKeys){const input=$(`#profile-${key}`);if(input.type==='checkbox')input.checked=!!config[key];else input.value=key==='token'?'':config[key]??'';}
+  $('#profile-token').required=!profile;
+  $('#profile-message').textContent='';
+}
+function renderServerChoices() {
+  const editorValue=$('#profile-editor').value;
+  for(const role of ['source','target']){
+    const select=$(`#${role}-profile`);select.replaceChildren();const empty=element('option',t('Seleziona un server salvato'));empty.value='';select.append(empty);
+    for(const profile of serverProfiles){const option=element('option',`${profile.name} — ${profile.connection.url}`);option.value=profile.id;select.append(option);}
+    select.value=selectedProfileIds[role]||'';
+  }
+  const editor=$('#profile-editor');editor.replaceChildren();const create=element('option',t('Nuovo server'));create.value='';editor.append(create);
+  for(const profile of serverProfiles){const option=element('option',profile.name);option.value=profile.id;editor.append(option);}
+  editor.value=serverProfiles.some(p=>p.id===editorValue)?editorValue:'';
+  $('#apply-roles').disabled=jobsBusy||serverProfiles.length<2;$('#swap-roles').disabled=jobsBusy||serverProfiles.length<2;$('#save-profile').disabled=jobsBusy;
+}
+async function loadServerProfiles(){const data=await api('/servers');serverProfiles=data.profiles;selectedProfileIds={source:data.source_id,target:data.target_id};renderServerChoices();}
+function readConnectionFields(role){return Object.fromEntries(connectionKeys.map(key=>{const input=$(`#${role}-${key}`);return [key,input.type==='checkbox'?input.checked:key==='ssh_port'?Number(input.value):input.value.trim()];}));}
+async function loadConfig() { await loadServerProfiles(); const data = await api('/config'); hasConnections=data.configured; $('#setup-prompt').hidden=hasConnections || activeTab!=='overview'; for (const role of ['source','target']) { const config=data.connections[role]; if (!config) continue; for (const [key,value] of Object.entries(config)) { const input=$(`#${role}-${key}`); if (input) { if (input.type === 'checkbox') input.checked = value; else input.value = value; } } $(`#${role}-summary-url`).textContent=config.url; $(`#${role}-state`).textContent=t('Configurata · da verificare'); } }
 async function loadGuide() {
   const language=CloneI18n.language; const data=await api('/setup?language='+language); if(language!==CloneI18n.language)return; guideData=data; renderGuide(data);
 }
@@ -97,7 +130,7 @@ function renderPlan(plan) {
 }
 const statuses={queued:'In coda',running:'In corso',failed:'Non completata',copied:'Copiata · verifica finale richiesta',interrupted:'Interrotta · controlla la sorgente'};
 async function refreshJobs() {
-  const result=await api('/jobs'); $('#job-count').textContent=result.jobs.length; $('#jobs').replaceChildren();
+  const result=await api('/jobs'); jobsBusy=result.busy;$('#apply-roles').disabled=jobsBusy||serverProfiles.length<2;$('#swap-roles').disabled=jobsBusy||serverProfiles.length<2;$('#save-profile').disabled=jobsBusy; $('#job-count').textContent=result.jobs.length; $('#jobs').replaceChildren();
   if (!result.jobs.length) { const empty=element('div',undefined,'panel empty'); empty.append(element('h3',t('Nessuna clonazione avviata')),element('p',t('Le operazioni appariranno qui con il loro stato e il registro degli eventi.'))); $('#jobs').append(empty); }
   for (const job of result.jobs) {
     const card=element('article',undefined,'panel job-card'), top=element('div',undefined,'job-top'), info=element('div'); info.append(element('h2',job.id.slice(0,12)),element('small',new Date(job.created*1000).toLocaleString(CloneI18n.locale))); top.append(info,element('span',t(statuses[job.status] || job.status),'pill')); const progress=element('progress',undefined,'job-progress'); progress.max=100; progress.value=job.data.progress||0; progress.setAttribute('aria-label',t('Avanzamento clonazione')); card.append(top,progress,element('p',t('Fase: {phase}', {phase:t(job.data.phase)}),'muted'));
@@ -113,12 +146,16 @@ async function refreshJobs() {
   }
   if(result.busy) $('#open-execute').disabled=true;
 }
-async function enter() { $('#login-screen').hidden=true; $('#workspace').hidden=false;await loadConfig();const plan=await api('/plan');if(plan){selectedUuids.clear();for(const row of plan.resources)selectedUuids.add(row.uuid);}renderPlan(plan);renderSelection();await refreshJobs();tab(hasConnections?'overview':'guide');if(polling)clearInterval(polling);polling=setInterval(()=>{if(activeTab==='history')refreshJobs().catch(()=>{});},5000); }
+async function enter() { $('#login-screen').hidden=true; $('#workspace').hidden=false;await loadConfig();const plan=await api('/plan');if(plan){selectedUuids.clear();for(const row of plan.resources)selectedUuids.add(row.uuid);}renderPlan(plan);renderSelection();await refreshJobs();tab(hasConnections?'overview':'guide');if(polling)clearInterval(polling);polling=setInterval(()=>{if(activeTab==='history'||activeTab==='connections')refreshJobs().catch(()=>{});},5000); }
 connectionForms();
+profileEditorFields();
+CloneI18n.capture($('#profile-fields'));
 CloneI18n.capture($('#connection-fields'));
 CloneI18n.apply();
 for (const selector of document.querySelectorAll('.language-select')) selector.onchange=()=>{
   CloneI18n.setLanguage(selector.value);
+  $('#roles-message').textContent='';$('#profile-message').textContent='';
+  const draftRoles={source:$('#source-profile').value,target:$('#target-profile').value};renderServerChoices();$('#source-profile').value=draftRoles.source;$('#target-profile').value=draftRoles.target;
   renderSelection(); renderPlan(currentPlan);
   $('#load-resources').disabled=resourceLoading;
   $('#load-resources').textContent=t(resourceLoading?'Lettura sorgente…':'Carica elenco sorgente');
@@ -145,6 +182,10 @@ $('#preserve-domains').onchange=()=>{renderPlan(null);notify(t('Opzioni modifica
 $('#open-execute').onclick=()=>{$('#execute-form').reset();$('#execute-dialog').showModal();};
 $('#cancel-execute').onclick=()=>$('#execute-dialog').close();
 $('#execute-form').onsubmit=async event=>{event.preventDefault();const b=event.submitter;b.disabled=true;try{await post('/execute',{plan_id:currentPlan?.id,confirmation:$('#confirmation').value,downtime_accepted:$('#accept-downtime').checked,external_writers_stopped:$('#accept-writers').checked});$('#execute-dialog').close();renderPlan(null);tab('history');notify(t('Clonazione avviata. Puoi seguire l’avanzamento nel registro.'));}catch(e){$('#execute-dialog').close();notify(e.message,true);}finally{b.disabled=false;}};
+$('#profile-editor').onchange=fillProfileEditor;
+$('#swap-roles').onclick=()=>{const source=$('#source-profile'),target=$('#target-profile');[source.value,target.value]=[target.value,source.value];$('#roles-message').textContent=t('Ruoli invertiti nella selezione. Premi Applica ruoli per confermare.');};
+$('#roles-form').onsubmit=async event=>{event.preventDefault();const b=event.submitter;b.disabled=true;try{await post('/server-roles',{source_id:$('#source-profile').value,target_id:$('#target-profile').value});clearSelectionForConnections();await loadConfig();$('#roles-message').textContent=t('Ruoli salvati. Ricarica l’elenco e ripeti l’analisi prima della copia.');}catch(e){$('#roles-message').textContent=t(e.message);}finally{b.disabled=jobsBusy||serverProfiles.length<2;}};
+$('#server-profile-form').onsubmit=async event=>{event.preventDefault();const b=event.submitter;b.disabled=true;try{const result=await post('/servers',{id:$('#profile-editor').value||null,name:$('#profile-name').value.trim(),connection:readConnectionFields('profile')});$('#profile-token').value='';clearSelectionForConnections();await loadConfig();$('#profile-editor').value=result.id;fillProfileEditor();$('#profile-message').textContent=t('Server salvato. Puoi sceglierlo come trasmittente o ricevente.');}catch(e){$('#profile-message').textContent=t(e.message);}finally{b.disabled=jobsBusy;}};
 $('#refresh-jobs').onclick=()=>refreshJobs().catch(e=>notify(e.message,true));
 $('#cancel-resume').onclick=()=>$('#resume-dialog').close();
 $('#resume-form').onsubmit=async event=>{event.preventDefault();const b=event.submitter;b.disabled=true;$('#resume-error').textContent='';try{await post(`/jobs/${$('#resume-form').dataset.jobId}/resume-restore`,{confirmation:$('#resume-confirmation').value,snapshot_accepted:$('#accept-snapshot').checked});$('#resume-dialog').close();await refreshJobs();notify(t('Ripristino avviato dal backup conservato.'));}catch(e){$('#resume-error').textContent=t(e.message);}finally{b.disabled=false;}};

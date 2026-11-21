@@ -180,6 +180,24 @@ const CloneI18n = (() => {
   return {t, capture, apply, setLanguage, get language(){return language;}, get locale(){return language === 'en' ? 'en-GB' : 'it-IT';}, en, rebuildPatterns};
 })();
 Object.assign(CloneI18n.en, {
+  'Server salvati e ruoli':'Saved servers and roles',
+  'Salva più istanze Coolify e scegli quale trasmette e quale riceve per la prossima copia.':'Save multiple Coolify instances and choose the source and destination for the next copy.',
+  'Trasmittente (sorgente)':'Transmitting server (source)', 'Ricevente (destinazione)':'Receiving server (destination)',
+  'Il ricevente deve essere vuoto e avere un token con lettura, dati sensibili, scrittura e deploy. Cambiare ruolo non modifica i permessi del token.':'The destination must be empty and its token must allow read, sensitive data, write and deploy. Changing roles does not change token permissions.',
+  'Inverti ruoli':'Swap roles', 'Applica ruoli':'Apply roles', 'Aggiungi o modifica un server':'Add or edit a server',
+  'Server da modificare':'Server to edit', 'Nome riconoscibile':'Display name',
+  'Le credenziali restano cifrate. Per modificare un server già salvato puoi lasciare vuoto il token per conservarlo.':'Credentials remain encrypted. When editing a saved server, leave the token empty to keep the stored one.',
+  'Salva server':'Save server', 'Seleziona un server salvato':'Select a saved server', 'Nuovo server':'New server',
+  'Ruoli invertiti nella selezione. Premi Applica ruoli per confermare.':'Role selections swapped. Choose Apply roles to confirm.',
+  'Ruoli salvati. Ricarica l’elenco e ripeti l’analisi prima della copia.':'Roles saved. Reload resources and analyze again before copying.',
+  'Server salvato. Puoi sceglierlo come trasmittente o ricevente.':'Server saved. You can select it as source or destination.',
+  'Server salvato non trovato':'Saved server not found',
+  'Configurazione server non valida: controllare campi e token API':'Invalid server configuration: check the fields and API token',
+  'Limite di 100 server salvati raggiunto':'The limit of 100 saved servers has been reached',
+  'Selezionare trasmittente e ricevente':'Select source and destination servers',
+  'Selezionare due server salvati diversi':'Select two different saved servers',
+  'Trasmittente e ricevente devono essere server diversi':'Source and destination must be different servers',
+
   'Riprendi ripristino':'Resume restoration',
   'Verrà usato il backup originale. La sorgente rimane in esecuzione. Il recupero verifica le risorse create dal job e si ferma se il database destinazione contiene dati.':'The original backup will be used. The source keeps running. Recovery checks the resources created by this job and stops if the destination database contains data.',
   'Accetto che le scritture successive al backup non siano incluse nella copia.':'I accept that writes made after the backup are not included in the copy.',

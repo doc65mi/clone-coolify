@@ -16,6 +16,8 @@ if env_file.exists():
         from app.store import Store
         connections = Store(root / 'data', env['CLONE_MASTER_KEY']).get('connections') or {}
         secrets.extend(config['token'] for config in connections.values() if config.get('token'))
+        profiles = Store(root / 'data', env['CLONE_MASTER_KEY']).get('server-profiles') or {}
+        secrets.extend(p['connection']['token'] for p in profiles.get('profiles', []) if p['connection'].get('token'))
 errors = []
 for path in filter(None, paths):
     if path == 'ssh/.gitkeep':

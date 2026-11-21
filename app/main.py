@@ -17,7 +17,8 @@ from fastapi.staticfiles import StaticFiles
 from .coolify import CloneError, Coolify
 from .catalog import expand_database_selection, linked_source_catalog
 from .engine import check_database, recover_source, run_clone
-from .models import Connections, Execute, Login, PlanOptions, ResumeRestore
+from .models import Connections, Execute, Login, PlanOptions, ResumeRestore, SavedServer, ServerRoles
+from . import servers
 from .resume import eligible as resume_eligible, resume_restore
 from .planner import build_plan, fingerprint, public_plan
 from .ssh import SSH
@@ -64,6 +65,7 @@ async def lifespan(app):
         lock_file.close()
         raise RuntimeError("Un'altra istanza usa già questa directory dati") from None
     store.interrupt_jobs()
+    servers.initialize(store)
     previous_plan = store.get('current-plan')
     if previous_plan and previous_plan.get('version') != VERSION:
         store.put('current-plan', None)
@@ -168,7 +170,9 @@ def read_config(session=Depends(authorize)):
     configs = store.get("connections")
     return {"configured": bool(configs), "connections": {
         role: {k: v for k, v in config.items() if k != "token"} for role, config in (configs or {}).items()},
-        "ssh_directory": str(ssh_dir)}
+        "ssh_directory": str(ssh_dir),
+        "source_profile_id": servers.registry(store).get("source_id"),
+        "target_profile_id": servers.registry(store).get("target_id")}
 
 
 @app.get("/api/setup")
@@ -182,11 +186,35 @@ def save_config(body: Connections, session=Depends(authorize)):
         raise HTTPException(409, "Un'operazione è già in corso")
     try:
         configs = body.model_dump()
-        if configs["source"]["url"] == configs["target"]["url"]:
-            raise CloneError("Gli URL delle due istanze devono essere diversi")
-        store.put("connections", configs)
-        store.put("current-plan", None)
+        servers.save_connections(store, configs)
         return {"ok": True}
+    finally:
+        store.lock.release()
+
+
+@app.get('/api/servers')
+def saved_servers(session=Depends(authorize)):
+    return servers.public_profiles(store)
+
+
+@app.post('/api/servers')
+def save_server(body: SavedServer, session=Depends(authorize)):
+    if not store.lock.acquire(blocking=False):
+        raise HTTPException(409, "Un'operazione è già in corso")
+    try:
+        uid = servers.save_profile(store, body)
+        return {'ok': True, 'id': uid}
+    finally:
+        store.lock.release()
+
+
+@app.post('/api/server-roles')
+def set_server_roles(body: ServerRoles, session=Depends(authorize)):
+    if not store.lock.acquire(blocking=False):
+        raise HTTPException(409, "Un'operazione è già in corso")
+    try:
+        servers.assign_roles(store, body.source_id, body.target_id)
+        return {'ok': True}
     finally:
         store.lock.release()
 

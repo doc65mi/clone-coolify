@@ -1,6 +1,6 @@
 # Clone Coolify
 
-Applicazione self-hosted per analizzare e copiare applicazioni e database tra due installazioni Coolify indipendenti. Backend Python/FastAPI, interfaccia web in italiano e inglese e backup cifrati. Versione **0.7.1**, sperimentale.
+Applicazione self-hosted per analizzare e copiare applicazioni e database tra due installazioni Coolify indipendenti. Backend Python/FastAPI, interfaccia web in italiano e inglese e backup cifrati. Versione **0.8.0**, sperimentale.
 
 ## Lingua dell’app
 
@@ -29,6 +29,14 @@ Su Windows è disponibile `Avvia-Clone-Coolify.cmd`. Apri `http://127.0.0.1:8787
 
 Per Docker, dopo aver creato `.env` e configurato `ssh/`, usa `docker compose up --build -d`. La porta è associata solo a localhost. L'immagine Docker va collaudata nel proprio ambiente; non è stata verificata end-to-end durante lo sviluppo.
 
+## Server salvati e ruoli
+
+In **Connessioni**, salva più installazioni Coolify con nomi riconoscibili. Ogni profilo conserva URL, token cifrato, UUID e impostazioni SSH. In **Server salvati e ruoli**, scegli il **Trasmittente (sorgente)** e il **Ricevente (destinazione)**; premi **Applica ruoli**. **Inverti ruoli** scambia soltanto le selezioni fino alla conferma.
+
+Puoi aggiungere un altro trasmittente o usare un profilo come ricevente. Il ricevente deve ancora essere vuoto e il suo token deve consentire `read:sensitive`, `write` e `deploy`: cambiare ruolo non modifica i permessi del token. Le chiavi SSH rimangono associate al profilo. Aggiungi i nuovi file chiave in `ssh/` e le host key verificate a `known_hosts`.
+
+Una sola coppia e un solo job attivi alla volta. Cambiare ruoli o salvare profili invalida il piano; ricarica l’elenco e analizza la nuova selezione. Ruoli e profili non sono modificabili durante una copia. Modificando un profilo esistente puoi lasciare vuoto il token per conservarlo.
+
 ## Connessioni
 
 Usa due istanze della stessa versione Coolify, un solo server gestito per istanza, stessa architettura CPU e destinazione vuota. La destinazione viene controllata tramite API e inventario Docker. Non vengono sovrascritte risorse esistenti.
@@ -46,7 +54,7 @@ Configura chiavi dedicate in `ssh/` e registra in `ssh/known_hosts` le host key 
 
 Services/Compose, altri provider/build pack Git, bind/file mount, database multipli o con ruoli aggiuntivi, variabili condivise/bloccate e altre configurazioni non supportate bloccano il piano. Utenti e impostazioni globali Coolify, cron, registry, DNS e servizi esterni non sono copiati. Non è un clone universale e non effettua una sincronizzazione continua.
 
-Verifica della release: 80 test Python e 13 JavaScript superati; analisi API/SSH in sola lettura su Coolify 4.7.6. I test automatici verificano logica, sicurezza e percorsi simulati. Una clonazione completa va prima provata su istanze usa-e-getta: non è stata avviata alcuna migrazione di produzione per collaudare questa release.
+Verifica della release: 92 test Python e 13 JavaScript superati; analisi API/SSH in sola lettura su Coolify 4.7.6. I test automatici verificano logica, sicurezza e percorsi simulati. Una clonazione completa va prima provata su istanze usa-e-getta: non è stata avviata alcuna migrazione di produzione per collaudare questa release.
 
 ## Sicurezza dei dati
 

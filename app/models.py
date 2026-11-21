@@ -86,3 +86,25 @@ class PlanOptions(BaseModel):
         if any(not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", value) for value in values):
             raise ValueError("Identificatore risorsa non valido")
         return sorted(set(values))
+
+
+class ProfileConnection(Connection):
+    token: str = Field(default='', max_length=4096)
+
+
+class SavedServer(BaseModel):
+    id: str | None = Field(default=None, pattern=r'^[A-Za-z0-9_-]{1,100}$')
+    name: str = Field(min_length=1, max_length=80)
+    connection: ProfileConnection
+
+    @field_validator('name')
+    @classmethod
+    def nonempty_name(cls, value):
+        if not value.strip():
+            raise ValueError('Nome server obbligatorio')
+        return value.strip()
+
+
+class ServerRoles(BaseModel):
+    source_id: str = Field(pattern=r'^[A-Za-z0-9_-]{1,100}$')
+    target_id: str = Field(pattern=r'^[A-Za-z0-9_-]{1,100}$')

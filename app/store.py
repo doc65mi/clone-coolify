@@ -33,9 +33,12 @@ class Store:
         return db
 
     def put(self, name, data):
-        blob = self.cipher.encrypt(json.dumps(data).encode())
+        self.put_many({name: data})
+
+    def put_many(self, values):
+        rows = [(name, self.cipher.encrypt(json.dumps(data).encode())) for name, data in values.items()]
         with self.connect() as db:
-            db.execute("INSERT OR REPLACE INTO secrets VALUES (?, ?)", (name, blob))
+            db.executemany("INSERT OR REPLACE INTO secrets VALUES (?, ?)", rows)
 
     def get(self, name, default=None):
         with self.connect() as db:

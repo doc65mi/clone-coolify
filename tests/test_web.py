@@ -51,7 +51,7 @@ def test_index_and_security_headers(client):
     assert response.status_code == 200
     assert 'lang="it"' in response.text
     assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
-    assert client.get("/health").json()["version"] == "0.7.1"
+    assert client.get("/health").json()["version"] == "0.8.0"
 
 
 def test_english_guide_is_authenticated_and_does_not_change_connections(client):
@@ -128,3 +128,41 @@ def test_no_execution_without_reviewed_plan(client):
         "downtime_accepted":True, "external_writers_stopped":True})
     assert response.status_code == 400
     assert not main.store.lock.locked()
+
+
+def test_saved_servers_api_roles_and_encrypted_credentials(client):
+    token=client.post('/api/login',json={'password':PASSWORD}).json()['csrf']
+    headers={'x-csrf-token':token}
+    def body(name):
+        return {'name':name,'connection':{'url':f'https://{name}.example','token':name+'-private-token',
+                'ssh_host':f'{name}.example','ssh_key':name+'_ed25519'}}
+    assert client.post('/api/servers',json=body('first')).status_code==403
+    first=client.post('/api/servers',json=body('first'),headers=headers).json()['id']
+    second=client.post('/api/servers',json=body('second'),headers=headers).json()['id']
+    assert not client.get('/api/config').json()['configured']
+    roles={'source_id':first,'target_id':second}
+    assert client.post('/api/server-roles',json=roles,headers=headers).status_code==200
+    assert client.get('/api/config').json()['connections']['source']['url']=='https://first.example'
+    public=client.get('/api/servers').json()
+    assert 'private-token' not in str(public)
+    assert all('token' not in p['connection'] for p in public['profiles'])
+    main.store.put('current-plan',{'id':'old'})
+    assert client.post('/api/server-roles',json={'source_id':second,'target_id':first},headers=headers).status_code==200
+    assert main.store.get('current-plan') is None
+    assert client.get('/api/config').json()['connections']['target']['url']=='https://first.example'
+    before=main.store.get('server-profiles')
+    assert main.store.lock.acquire(False)
+    try:
+        assert client.post('/api/servers',json=body('third'),headers=headers).status_code==409
+        assert client.post('/api/server-roles',json=roles,headers=headers).status_code==409
+    finally:
+        main.store.lock.release()
+    assert main.store.get('server-profiles')==before
+
+
+def test_saved_server_validation_does_not_expose_token(client):
+    token=client.post('/api/login',json={'password':PASSWORD}).json()['csrf']
+    r=client.post('/api/servers',headers={'x-csrf-token':token},json={'name':'Secret server','connection':{
+        'url':'https://user:NEVER-ECHO-PASSWORD@example.com','token':'NEVER-ECHO-TOKEN','ssh_host':'example.com'}})
+    assert r.status_code==422
+    assert 'NEVER-ECHO' not in r.text
